@@ -23,8 +23,6 @@ export class SpeakerStage {
 
     // 모듈 초기화
     static initialize() {
-        console.log('LichSOMA Speaker Stage | 초기화 중...');
-        
         // 설정 등록
         this.registerSettings();
         
@@ -393,7 +391,6 @@ export class SpeakerStage {
             });
             
             this._fontChoicesUpdated = true;
-            console.log('LichSOMA Speaker Stage | 폰트 목록 업데이트 완료:', Object.keys(availableFonts).length, '개');
         } catch (error) {
             console.error('LichSOMA Speaker Stage | 폰트 선택 옵션 업데이트 실패:', error);
         }
@@ -429,7 +426,6 @@ export class SpeakerStage {
         // 스피커 셀렉터의 설정 변경 감지
         Hooks.on('updateSetting', (setting, value) => {
             if (setting.key === 'lichsoma-speaker-selecter.actorGridActors') {
-                console.log('LichSOMA Speaker Stage | 액터 목록 변경 감지');
                 // 백스테이지 다시 렌더링
                 setTimeout(() => {
                     this._renderBackstage($(document));
@@ -506,7 +502,6 @@ export class SpeakerStage {
                 
                 if (selector.length && (!hasActorButton || !hasStageButton) && !this._isSidebarCollapsed()) {
                     this._renderPlayerStageToggle($(document));
-                    console.log('LichSOMA Speaker Stage | MutationObserver에서 플레이어 버튼 추가');
                 }
             });
             
@@ -514,8 +509,6 @@ export class SpeakerStage {
                 childList: true,
                 subtree: true
             });
-            
-            console.log('LichSOMA Speaker Stage | MutationObserver 설정 완료');
         });
 
         // 사이드바 상태 변경 시 처리
@@ -540,20 +533,15 @@ export class SpeakerStage {
 
     // 플레이어 스테이지 토글 버튼 렌더링 (모든 유저)
     static _renderPlayerStageToggle(html) {
-        console.log('LichSOMA Speaker Stage | _renderPlayerStageToggle 호출');
-        
         // 사이드바 상태 확인
         const sidebarCollapsed = this._isSidebarCollapsed();
         if (sidebarCollapsed) {
-            console.log('LichSOMA Speaker Stage | 사이드바 접혀있음, 버튼 렌더링 중단');
             return;
         }
 
         // speaker selector 찾기
         const speakerSelector = $(document).find('.lichsoma-speaker-selector');
-        console.log('LichSOMA Speaker Stage | speaker selector 찾기 결과:', speakerSelector.length);
         if (!speakerSelector.length) {
-            console.log('LichSOMA Speaker Stage | speaker selector를 찾을 수 없음');
             return;
         }
 
@@ -588,13 +576,11 @@ export class SpeakerStage {
                 if (this._activeActors.has(actorId)) {
                     // 이미 스테이지에 있으면 스피커 셀렉터에서 선택만
                     this._selectSpeakerInSelector(actorId);
-                    console.log('LichSOMA Speaker Stage | 플레이어 캐릭터 스피커 선택:', actorId);
                 } else {
                     // 스테이지에 없으면 올리고 스피커 선택
                     this._onPlayerActorToggle(actorId);
                     // 버튼 상태 업데이트
                     actorToggleBtn.attr('aria-pressed', 'true');
-                    console.log('LichSOMA Speaker Stage | 플레이어 캐릭터 스테이지에 올림:', actorId);
                 }
             } else {
                 ui.notifications.warn(game.i18n.localize('SPEAKERSTAGE.Player.NoCharacter'));
@@ -616,7 +602,6 @@ export class SpeakerStage {
                 
                 // 버튼 상태 업데이트
                 actorToggleBtn.attr('aria-pressed', 'false');
-                console.log('LichSOMA Speaker Stage | 플레이어 캐릭터 스테이지에서 내림:', actorId);
             }
         });
 
@@ -635,13 +620,11 @@ export class SpeakerStage {
             this._toggleStage();
             // 버튼 상태 업데이트
             stageToggleBtn.attr('aria-pressed', this._stageActive ? 'true' : 'false');
-            console.log('LichSOMA Speaker Stage | 플레이어 스테이지 표시 토글:', this._stageActive);
         });
 
         // speaker selector에 추가 (순서대로)
         speakerSelector.append(actorToggleBtn);
         speakerSelector.append(stageToggleBtn);
-        console.log('LichSOMA Speaker Stage | 플레이어 버튼 추가 완료');
     }
 
     // 사이드바 상태 확인
@@ -735,7 +718,6 @@ export class SpeakerStage {
             // 버튼 상태 업데이트
             const btn = $(e.currentTarget);
             btn.attr('aria-pressed', this._stageActive ? 'true' : 'false');
-            console.log('LichSOMA Speaker Stage | GM 버튼 aria-pressed 업데이트:', this._stageActive);
         });
         
         // 액터 포트레잇 좌클릭 이벤트 리스너 (대화창 토글)
@@ -952,13 +934,8 @@ export class SpeakerStage {
 
     // 스피커 셀렉터에서 액터 선택
     static _selectSpeakerInSelector(actorId) {
-        console.log('LichSOMA Speaker Stage | _selectSpeakerInSelector 호출:', actorId);
-        
         const selector = document.querySelector('.lichsoma-speaker-selector .speaker-dropdown');
-        if (!selector) {
-            console.warn('LichSOMA Speaker Stage | 스피커 셀렉터 드롭다운을 찾을 수 없음');
-            return;
-        }
+        if (!selector) return;
         
         // 현재 사용자의 할당된 캐릭터인지 확인
         const userCharacterId = game.user.character instanceof Actor 
@@ -968,32 +945,19 @@ export class SpeakerStage {
         
         // 할당된 캐릭터면 'character', 아니면 'actor:actorId'
         const optionValue = isUserCharacter ? 'character' : `actor:${actorId}`;
-        console.log('LichSOMA Speaker Stage | 선택할 옵션 값:', optionValue, '(할당된 캐릭터:', isUserCharacter, ')');
         
         const option = selector.querySelector(`option[value="${optionValue}"]`);
-        console.log('LichSOMA Speaker Stage | 옵션 찾기 결과:', !!option);
         
         if (option) {
             selector.value = optionValue;
-            console.log('LichSOMA Speaker Stage | 드롭다운 값 설정 완료:', selector.value);
-            
             // 스피커 셀렉터 모듈의 선택 상태도 업데이트
-            // change 이벤트 발생시켜 스피커 셀렉터가 인식하도록 함
             $(selector).trigger('change');
-            console.log('LichSOMA Speaker Stage | change 이벤트 발생');
-        } else {
-            console.warn('LichSOMA Speaker Stage | 옵션을 찾을 수 없음:', optionValue);
-            // 사용 가능한 옵션 목록 출력
-            const availableOptions = Array.from(selector.querySelectorAll('option')).map(opt => opt.value);
-            console.log('LichSOMA Speaker Stage | 사용 가능한 옵션:', availableOptions);
         }
     }
 
     // 소켓 통신 설정
     static setupSocket() {
         game.socket.on('module.lichsoma-speaker-stage', (data) => {
-            console.log('LichSOMA Speaker Stage | 소켓 메시지 수신:', data);
-            
             if (data.action === 'updateStage') {
                 this._receiveStageState(data);
             }
@@ -1002,17 +966,8 @@ export class SpeakerStage {
 
     // 스테이지 액터 목록 브로드캐스트
     static _broadcastStageState() {
-        console.log('LichSOMA Speaker Stage | _broadcastStageState 호출');
-        
         // 액터 정보를 직렬화 가능한 형태로 변환 (감정 정보 포함)
         const actorsData = Array.from(this._activeActors.entries()).map(([id, data]) => {
-            console.log(`LichSOMA Speaker Stage | 브로드캐스트 준비 - 액터 ${id}:`, {
-                img: data.img,
-                emotionId: data.emotionId,
-                emotionPortrait: data.emotionPortrait,
-                userId: data.userId,
-                emotionUserId: data.emotionUserId
-            });
             return {
                 id,
                 img: data.img,
@@ -1021,8 +976,8 @@ export class SpeakerStage {
                 emotionPortrait: data.emotionPortrait || null,
                 position: data.position,
                 dialogueVisible: data.dialogueVisible,
-                userId: data.userId, // 액터를 올린 유저 ID
-                emotionUserId: data.emotionUserId // 감정을 설정한 유저 ID
+                userId: data.userId,
+                emotionUserId: data.emotionUserId
             };
         });
 
@@ -1032,21 +987,13 @@ export class SpeakerStage {
             userId: game.user.id
         };
 
-        console.log('LichSOMA Speaker Stage | 스테이지 액터 목록 브로드캐스트:', stageData);
         game.socket.emit('module.lichsoma-speaker-stage', stageData);
     }
 
     // 스테이지 액터 목록 수신
     static _receiveStageState(data) {
-        console.log('LichSOMA Speaker Stage | _receiveStageState 호출:', data);
-        
         // 자신이 보낸 메시지는 무시
-        if (data.userId === game.user.id) {
-            console.log('LichSOMA Speaker Stage | 자신이 보낸 메시지 무시');
-            return;
-        }
-
-        console.log('LichSOMA Speaker Stage | 스테이지 액터 목록 적용:', data);
+        if (data.userId === game.user.id) return;
 
         // 현재 DOM에 있는 액터들을 _previousActorIds로 설정
         const container = $('#lichsoma-stage-overlay .stage-characters-container');
@@ -1061,15 +1008,7 @@ export class SpeakerStage {
         // 액터 목록 업데이트
         this._activeActors.clear();
         data.actors.forEach(actorData => {
-            // 수신된 감정 포트레잇 사용
             const actorImg = actorData.emotionPortrait || actorData.img;
-            console.log(`LichSOMA Speaker Stage | 액터 ${actorData.id} 수신:`, {
-                img: actorImg,
-                emotionId: actorData.emotionId,
-                emotionPortrait: actorData.emotionPortrait,
-                userId: actorData.userId,
-                emotionUserId: actorData.emotionUserId
-            });
             this._activeActors.set(actorData.id, {
                 img: actorImg,
                 name: actorData.name,
@@ -1077,20 +1016,16 @@ export class SpeakerStage {
                 emotionPortrait: actorData.emotionPortrait,
                 position: actorData.position,
                 dialogueVisible: actorData.dialogueVisible,
-                userId: actorData.userId, // 액터를 올린 유저 ID
-                emotionUserId: actorData.emotionUserId // 감정을 설정한 유저 ID
+                userId: actorData.userId,
+                emotionUserId: actorData.emotionUserId
             });
         });
 
-        console.log('LichSOMA Speaker Stage | _activeActors 업데이트 완료:', Array.from(this._activeActors.entries()));
-
         // UI 업데이트
         if (this._stageActive) {
-            console.log('LichSOMA Speaker Stage | 스테이지 활성화 중 - UI 업데이트');
             this._showStageOverlay();
             this._updateStageOverlay();
         } else {
-            console.log('LichSOMA Speaker Stage | 스테이지 비활성화 중');
             this._hideStageOverlay();
         }
 
@@ -1153,36 +1088,22 @@ export class SpeakerStage {
 
     // 스테이지 오버레이 업데이트
     static _updateStageOverlay() {
-        console.log('LichSOMA Speaker Stage | _updateStageOverlay 호출, 활성 액터:', this._activeActors.size);
-        
         const container = $('#lichsoma-stage-overlay .stage-characters-container');
-        console.log('LichSOMA Speaker Stage | 컨테이너:', container.length);
 
         // 스테이지 너비 계산
         const sidebar = document.querySelector('#sidebar');
         const sidebarWidth = sidebar ? sidebar.offsetWidth : 300;
         const stageWidth = window.innerWidth - sidebarWidth;
         const maxDialogueWidth = stageWidth / 2;
-        
-        console.log('LichSOMA Speaker Stage | 너비 계산:', {
-            windowWidth: window.innerWidth,
-            sidebarWidth: sidebarWidth,
-            stageWidth: stageWidth,
-            maxDialogueWidth: maxDialogueWidth
-        });
 
         // 현재 액터 ID 목록
         const currentActorIds = new Set(this._activeActors.keys());
-        console.log('LichSOMA Speaker Stage | 현재 액터 IDs:', Array.from(currentActorIds));
-        console.log('LichSOMA Speaker Stage | 이전 액터 IDs:', Array.from(this._previousActorIds));
         
         // 새로 추가된 액터 찾기
         const newActorIds = new Set([...currentActorIds].filter(id => !this._previousActorIds.has(id)));
-        console.log('LichSOMA Speaker Stage | 새 액터 IDs:', Array.from(newActorIds));
         
         // 제거된 액터 찾기
         const removedActorIds = new Set([...this._previousActorIds].filter(id => !currentActorIds.has(id)));
-        console.log('LichSOMA Speaker Stage | 제거된 액터 IDs:', Array.from(removedActorIds));
 
         // 제거된 액터 처리
         removedActorIds.forEach(actorId => {
@@ -1235,7 +1156,6 @@ export class SpeakerStage {
                     // 이미지 업데이트 (감정 변경 시)
                     const currentImg = existingWrapper.find('.stage-character img').attr('src');
                     if (currentImg !== actorData.img) {
-                        console.log(`LichSOMA Speaker Stage | 액터 ${actorId} 이미지 업데이트: ${currentImg} → ${actorData.img}`);
                         existingWrapper.find('.stage-character img').attr('src', actorData.img);
                     }
                     
@@ -1244,7 +1164,6 @@ export class SpeakerStage {
             } else {
                 // 새 액터 - 추가
                 const isNew = newActorIds.has(actorId);
-                console.log(`LichSOMA Speaker Stage | 새 액터 추가: ${actorId}, isNew: ${isNew}`);
                 
                 if (isNew) {
                     // 새 액터는 preparing 상태로 시작 (공간을 차지하지 않음)
@@ -1313,57 +1232,36 @@ export class SpeakerStage {
     // 액터 이미지 가져오기 (감정 포트레잇 우선)
     static _getActorImage(actorId) {
         const actor = game.actors.get(actorId);
-        if (!actor) {
-            console.warn(`LichSOMA Speaker Stage | 액터 ${actorId}를 찾을 수 없음`);
-            return null;
-        }
+        if (!actor) return null;
 
         // 감정 포트레잇 확인
-        console.log(`LichSOMA Speaker Stage | ActorEmotions 사용 가능:`, !!this.ActorEmotions);
         if (this.ActorEmotions) {
             const savedEmotion = this.ActorEmotions.getSavedEmotion(actorId);
-            console.log(`LichSOMA Speaker Stage | 액터 ${actorId}의 저장된 감정:`, savedEmotion);
             if (savedEmotion?.emotionPortrait) {
-                console.log(`LichSOMA Speaker Stage | ✓ 감정 포트레잇 사용: ${savedEmotion.emotionPortrait}`);
                 return savedEmotion.emotionPortrait;
             }
         }
 
         // 기본 액터 이미지
-        console.log(`LichSOMA Speaker Stage | 기본 액터 이미지 사용: ${actor.img}`);
         return actor.img;
     }
 
     // 스테이지의 모든 액터 이미지 업데이트
     static _updateStageActorImages() {
-        console.log('LichSOMA Speaker Stage | _updateStageActorImages 호출');
-        
         const overlay = $('#lichsoma-stage-overlay');
-        if (!overlay.length) {
-            console.log('LichSOMA Speaker Stage | overlay 없음');
-            return;
-        }
+        if (!overlay.length) return;
 
         let emotionChanged = false;
 
         this._activeActors.forEach((actorData, actorId) => {
             // 다른 유저가 이미 감정을 설정했으면 건드리지 않음
             if (actorData.emotionUserId && actorData.emotionUserId !== game.user.id) {
-                console.log(`LichSOMA Speaker Stage | 액터 ${actorId}는 다른 유저(${actorData.emotionUserId})가 감정 설정함, 건너뜀`);
                 return;
             }
             
             // 최신 감정 정보 가져오기 (현재 유저의 감정 설정)
             const emotion = this.ActorEmotions?.getSavedEmotion(actorId);
             const newEmotionPortrait = emotion?.emotionPortrait || null;
-            
-            console.log(`LichSOMA Speaker Stage | 액터 ${actorId} 감정 확인:`, {
-                이전: actorData.emotionPortrait,
-                새로운: newEmotionPortrait,
-                이전_감정_유저: actorData.emotionUserId,
-                현재_유저: game.user.id,
-                변경됨: actorData.emotionPortrait !== newEmotionPortrait
-            });
             
             // 감정이 변경되었는지 확인
             if (actorData.emotionPortrait !== newEmotionPortrait) {
@@ -1373,18 +1271,12 @@ export class SpeakerStage {
                 actorData.emotionId = emotion?.emotionId || null;
                 actorData.emotionPortrait = newEmotionPortrait;
                 actorData.img = newEmotionPortrait || game.actors.get(actorId)?.img || actorData.img;
-                actorData.emotionUserId = game.user.id; // 감정을 변경한 유저 ID
-                
-                console.log(`LichSOMA Speaker Stage | ✓ 액터 ${actorId} 감정 업데이트:`, {
-                    img: actorData.img,
-                    emotionUserId: actorData.emotionUserId
-                });
+                actorData.emotionUserId = game.user.id;
             }
             
             const wrapper = overlay.find(`[data-actor-id="${actorId}"]`);
             if (wrapper.length && actorData.img) {
                 wrapper.find('.stage-character img').attr('src', actorData.img);
-                console.log(`LichSOMA Speaker Stage | ✓ 액터 ${actorId} 이미지 DOM 업데이트`);
             }
         });
 
@@ -1394,9 +1286,7 @@ export class SpeakerStage {
         }
 
         // 감정이 변경되었으면 브로드캐스트
-        console.log('LichSOMA Speaker Stage | emotionChanged:', emotionChanged);
         if (emotionChanged) {
-            console.log('LichSOMA Speaker Stage | 감정 변경 감지 - 브로드캐스트 호출');
             this._broadcastStageState();
         }
     }
@@ -1422,7 +1312,6 @@ export class SpeakerStage {
         // Dialog 닫힘 감지 (감정 선택 다이얼로그)
         Hooks.on('closeDialog', (dialog) => {
             if (dialog?.data?.title && dialog.data.title.includes('감정')) {
-                console.log('LichSOMA Speaker Stage | 감정 선택 다이얼로그 닫힘 - 스테이지 이미지 업데이트');
                 setTimeout(() => {
                     this._updateStageActorImages();
                 }, 100);
@@ -1432,7 +1321,6 @@ export class SpeakerStage {
         // 액터 업데이트 감지 (감정 관리 창에서 저장)
         Hooks.on('updateActor', (actor, changes) => {
             if (changes.system?.emotions) {
-                console.log('LichSOMA Speaker Stage | 액터 감정 데이터 업데이트:', actor.id);
                 setTimeout(() => {
                     this._updateStageActorImages();
                 }, 100);
@@ -1450,13 +1338,17 @@ export class SpeakerStage {
     // 채팅 메시지 처리
     static _onChatMessage(message) {
         // IC 메시지만 처리 (일반 채팅)
-        // Foundry V12+: message.style 사용
         const messageStyle = message.style ?? message.type;
+        const messageType = message.type;
         const IC_STYLE = CONST.CHAT_MESSAGE_STYLES?.IC ?? CONST.CHAT_MESSAGE_TYPES?.IC ?? 2;
         
-        if (messageStyle !== IC_STYLE) {
-            return;
-        }
+        // IC 메시지 체크: style이 IC이거나, type이 'base'이거나, style이 1 또는 2
+        const isICMessage = messageStyle === IC_STYLE || 
+                           messageType === 'base' || 
+                           messageStyle === 1 || 
+                           messageStyle === 2;
+        
+        if (!isICMessage) return;
         
         // 주사위 굴림이 포함된 메시지 제외
         if (message.rolls && message.rolls.length > 0) return;
@@ -1503,7 +1395,6 @@ export class SpeakerStage {
             
             // 타이핑 효과로 텍스트 업데이트 (HTML 지원)
             this._typeText(actorId, dialogueContent[0], plainText, processedHtml, typingSpeed);
-            console.log('LichSOMA Speaker Stage | 다이얼로그 박스 업데이트:', actorId, plainText);
         }
     }
 
@@ -1669,8 +1560,10 @@ export class SpeakerStage {
         if (!soundPath || soundPath.trim() === '') return;
         
         try {
-            // Foundry의 AudioHelper 사용
-            AudioHelper.play({
+            // Foundry V12+: foundry.audio.AudioHelper 사용
+            // 하위 호환성을 위해 fallback 추가
+            const AudioHelperClass = foundry?.audio?.AudioHelper ?? AudioHelper;
+            AudioHelperClass.play({
                 src: soundPath,
                 volume: volume,
                 loop: false
@@ -1688,8 +1581,6 @@ Hooks.once('init', () => {
 });
 
 Hooks.once('ready', () => {
-    console.log('LichSOMA Speaker Stage | 준비 완료');
-    
     // 폰트 설정 초기 적용
     const dialogueFont = game.settings.get(SpeakerStage.MODULE_ID, 'dialogueFont');
     const dialogueFontSize = game.settings.get(SpeakerStage.MODULE_ID, 'dialogueFontSize');
@@ -1715,11 +1606,8 @@ Hooks.once('ready', () => {
             
             if (!SpeakerStage._isSidebarCollapsed() && chatForm.length && speakerSelector.length) {
                 SpeakerStage._renderBackstage($(document));
-                console.log('LichSOMA Speaker Stage | 백스테이지 초기 렌더링 완료');
             } else if (attempts < maxAttempts) {
                 setTimeout(checkAndRender, 100);
-            } else {
-                console.log('LichSOMA Speaker Stage | 백스테이지 렌더링 실패 (speaker selector를 찾을 수 없음)');
             }
         };
         checkAndRender();
@@ -1733,11 +1621,8 @@ Hooks.once('ready', () => {
             
             if (!SpeakerStage._isSidebarCollapsed() && speakerSelector.length) {
                 SpeakerStage._renderPlayerStageToggle($(document));
-                console.log('LichSOMA Speaker Stage | 플레이어 토글 버튼 초기 렌더링 완료');
             } else if (attempts < maxAttempts) {
                 setTimeout(checkAndRender, 100);
-            } else {
-                console.log('LichSOMA Speaker Stage | 플레이어 토글 버튼 렌더링 실패 (speaker selector를 찾을 수 없음)');
             }
         };
         checkAndRender();
