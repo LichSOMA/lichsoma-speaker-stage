@@ -1,0 +1,9 @@
+{
+  "SPEAKERSTAGE.Backstage.ToggleButton.Title": "스테이지 토글",
+  "SPEAKERSTAGE.Backstage.ToggleButton.AriaLabel": "스테이지 표시/숨기기",
+  "SPEAKERSTAGE.Player.ToggleButton.Title": "스테이지 표시/숨기기",
+  "SPEAKERSTAGE.Player.ToggleButton.AriaLabel": "스테이지 표시/숨기기",
+  "SPEAKERSTAGE.Player.ActorToggleButton.Title": "내 캐릭터 스테이지 올리기/내리기",
+  "SPEAKERSTAGE.Player.ActorToggleButton.AriaLabel": "내 캐릭터 스테이지 올리기/내리기",
+  "SPEAKERSTAGE.Player.NoCharacter": "할당된 캐릭터가 없습니다."
+}

@@ -1,0 +1,399 @@
+/**
+ * LichSOMA Speaker Stage Styles
+ */
+
+/* 백스테이지 전체 컨테이너 (백스테이지 + 토글 버튼) */
+.lichsoma-speaker-backstage-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 백스테이지 컨테이너 (액터 목록만) */
+.lichsoma-speaker-backstage {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    padding: 0px 4px;
+    background: var(--color-cool-5-75);
+    border-radius: 4px;
+    min-height: 32px;
+}
+
+/* 액터 포트레잇 영역 */
+.backstage-actors {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* 스크롤바 스타일 */
+.backstage-actors::-webkit-scrollbar {
+    height: 4px;
+}
+
+.backstage-actors::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+}
+
+.backstage-actors::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.backstage-actors::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* 액터 포트레잇 */
+.actor-portrait {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 2px solid var(--color-border-dark-tertiary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.actor-portrait:hover {
+    border-color: var(--color-border-highlight-alt);
+    transform: scale(1.1);
+}
+
+/* 스테이지에 올라간 액터 */
+.actor-portrait.on-stage {
+    border-color: #ffd700;
+}
+
+.actor-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(100%);
+    transition: filter 0.3s ease;
+}
+
+/* 스테이지에 올라간 액터는 컬러로 표시 */
+.actor-portrait.on-stage img {
+    filter: grayscale(0%);
+}
+
+/* 액터 없음 메시지 */
+.no-actors {
+    color: var(--color-text-dark-secondary);
+    font-size: 12px;
+    font-style: italic;
+    text-align: center;
+    width: 100%;
+    padding: 8px;
+}
+
+/* 토글 버튼 (백스테이지 오른쪽, GM용) */
+.lichsoma-speaker-backstage-container .backstage-toggle-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    /* ui-control 클래스가 기본 스타일을 제공하므로 필요한 것만 추가 */
+}
+
+.lichsoma-speaker-backstage-container .backstage-toggle-btn i {
+    font-size: var(--font-size-16);
+}
+
+/* 활성화 상태 (narrator 버튼과 동일) */
+.lichsoma-speaker-backstage-container .backstage-toggle-btn[aria-pressed="true"] i {
+    color: var(--color-warm-1) !important;
+}
+
+/* 플레이어 캐릭터 토글 버튼 (speaker selector 안) */
+.lichsoma-speaker-selector .player-actor-toggle-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    /* ui-control 클래스가 기본 스타일을 제공하므로 필요한 것만 추가 */
+}
+
+.lichsoma-speaker-selector .player-actor-toggle-btn i {
+    font-size: var(--font-size-16);
+}
+
+/* 활성화 상태 (narrator 버튼과 동일) */
+.lichsoma-speaker-selector .player-actor-toggle-btn[aria-pressed="true"] i {
+    color: var(--color-warm-1) !important;
+}
+
+/* 플레이어 스테이지 토글 버튼 (speaker selector 안) */
+.lichsoma-speaker-selector .player-stage-toggle-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    /* ui-control 클래스가 기본 스타일을 제공하므로 필요한 것만 추가 */
+}
+
+.lichsoma-speaker-selector .player-stage-toggle-btn i {
+    font-size: var(--font-size-16);
+}
+
+/* 활성화 상태 (narrator 버튼과 동일) */
+.lichsoma-speaker-selector .player-stage-toggle-btn[aria-pressed="true"] i {
+    color: var(--color-warm-1) !important;
+}
+
+/* 스테이지 오버레이 (#interface 내부, #ui-right 제외 영역) */
+#lichsoma-stage-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out;
+    /* width, height 등 레이아웃 속성은 transition 없이 즉시 적용 */
+}
+
+/* #interface 내부에서 #ui-right 영역 제외 */
+#interface #lichsoma-stage-overlay {
+    right: auto;
+    width: calc(100% - var(--sidebar-width, 300px));
+}
+
+/* 숨김 상태 (페이드 아웃) */
+#lichsoma-stage-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* 캐릭터 컨테이너 (가로 배치) */
+.stage-characters-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 15px;
+    padding: 0px 20px;
+}
+
+/* 캐릭터 래퍼 (캐릭터 이미지 + 대화창) */
+.stage-character-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-height: 100%;
+    flex: 1 1 auto;
+    min-width: 300px;
+    transition: flex 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                flex-grow 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                flex-shrink 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                flex-basis 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                min-width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                max-width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: flex, width;
+}
+
+/* 새 액터 준비 상태 (공간을 차지하지 않음) */
+.stage-character-wrapper.preparing {
+    flex: 0 0 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden;
+}
+
+/* 공간 확보 상태 (보이지 않지만 공간은 차지) */
+.stage-character-wrapper.expanding {
+    opacity: 0 !important;
+    transform: translateX(150px) !important;
+}
+
+/* 새 액터 슬라이드 인 애니메이션 (오른쪽에서 왼쪽으로) */
+.stage-character-wrapper.slide-in-new {
+    animation: slideInFromRight 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes slideInFromRight {
+    0% {
+        opacity: 0;
+        transform: translateX(150px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* 액터 제거 애니메이션 (슬라이드 아웃만) */
+.stage-character-wrapper.removing {
+    animation: slideOutToRight 0.4s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
+    pointer-events: none;
+}
+
+@keyframes slideOutToRight {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(150px);
+    }
+}
+
+/* 액터 공간 축소 (슬라이드 아웃 후) */
+.stage-character-wrapper.shrinking {
+    flex: 0 0 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.stage-character-wrapper.left {
+    justify-self: flex-start;
+}
+
+.stage-character-wrapper.center {
+    justify-self: center;
+}
+
+.stage-character-wrapper.right {
+    justify-self: flex-end;
+}
+
+/* 개별 캐릭터 이미지 */
+.stage-character {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    flex: 1;
+    width: 100%;
+    max-height:400px;
+    /* fadeIn 애니메이션 제거 - wrapper의 slide-in-new만 사용 */
+}
+
+.stage-character img {
+    max-width: 250px;
+    max-height: 250px;
+    object-fit: contain;
+    object-position: bottom left;
+    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.5));
+}
+
+/* 캐릭터 이름 (이미지 좌측 하단에 겹침) */
+.stage-character .character-name {
+    position: absolute;
+    font-size: 32px;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    z-index: 10;
+}
+
+/* 개별 대화 상자 */
+.stage-dialogue-box {
+    background: rgba(0, 0, 0, 0.85);
+    padding: 10px 15px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    pointer-events: auto;
+    min-height: 120px;
+    width: 100%;
+    transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                max-width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: width;
+}
+
+
+/* 대화 내용 */
+.dialogue-content {
+    font-size: 16px;
+    color: #e0e0e0;
+    line-height: 1.6;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* 루비 문자 스타일 */
+.dialogue-content ruby.lichsoma-ruby {
+    ruby-position: over;
+}
+
+.dialogue-content ruby.lichsoma-ruby rt {
+    font-size: 0.6em;
+    opacity: 0.8;
+}
+
+/* 마크다운 스타일 */
+.dialogue-content strong {
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.dialogue-content em {
+    font-style: italic;
+}
+
+.dialogue-content del {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+
+/* 페이드인 애니메이션 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 반응형 조정 */
+@media (max-width: 768px) {
+    .lichsoma-speaker-backstage-container {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .lichsoma-speaker-backstage {
+        width: 100%;
+    }
+    
+    .backstage-actors {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .backstage-toggle-btn {
+        width: 100%;
+        height: 36px;
+    }
+
+    .stage-character-wrapper {
+        max-width: 300px;
+    }
+
+    .dialogue-content {
+        font-size: 14px;
+    }
+}
