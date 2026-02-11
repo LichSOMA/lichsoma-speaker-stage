@@ -14,10 +14,12 @@
     display: flex;
     align-items: center;
     flex: 1;
+    min-width: 0;
     padding: 0px 4px;
     background: var(--color-cool-5-75);
     border-radius: 4px;
     min-height: 32px;
+    overflow: hidden;
 }
 
 /* 액터 포트레잇 영역 */
@@ -26,27 +28,16 @@
     align-items: center;
     gap: 4px;
     flex: 1;
+    min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
 }
 
-/* 스크롤바 스타일 */
+/* 스크롤바 숨김 (Webkit 브라우저) */
 .backstage-actors::-webkit-scrollbar {
-    height: 4px;
-}
-
-.backstage-actors::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 2px;
-}
-
-.backstage-actors::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
-}
-
-.backstage-actors::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    display: none;
 }
 
 /* 액터 포트레잇 */
@@ -184,6 +175,8 @@
     justify-content: center;
     gap: 15px;
     padding: 0px 20px;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 /* 캐릭터 래퍼 (캐릭터 이미지 + 대화창) */
@@ -192,8 +185,9 @@
     flex-direction: column;
     align-items: flex-start;
     max-height: 100%;
-    flex: 1 1 auto;
-    min-width: 300px;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 100%;
     transition: flex 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
                 flex-grow 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
                 flex-shrink 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
@@ -313,8 +307,11 @@
     border: 2px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     pointer-events: auto;
-    min-height: 120px;
+    height: 150px;
     width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    overflow-wrap: break-word;
     transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
                 max-width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     will-change: width;
@@ -328,6 +325,12 @@
     line-height: 1.6;
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-all;
+    white-space: pre-wrap;
+    max-width: 100%;
 }
 
 /* 루비 문자 스타일 */
@@ -353,6 +356,25 @@
 .dialogue-content del {
     text-decoration: line-through;
     opacity: 0.7;
+}
+
+/* 대화 내용 스크롤바 스타일 */
+.dialogue-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dialogue-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.dialogue-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.dialogue-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 

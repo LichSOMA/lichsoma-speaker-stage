@@ -753,6 +753,18 @@ export class SpeakerStage {
             if (selectorElement && !selectorElement.style.order) {
                 selectorElement.style.order = '2';
             }
+            
+            // 백스테이지 액터 목록에 마우스 휠 좌우 스크롤 추가
+            const backstageActors = backstageContainerHTML.find('.backstage-actors')[0];
+            if (backstageActors) {
+                backstageActors.addEventListener('wheel', (e) => {
+                    // 세로 스크롤을 가로 스크롤로 변환
+                    if (e.deltaY !== 0) {
+                        e.preventDefault();
+                        backstageActors.scrollLeft += e.deltaY;
+                    }
+                }, { passive: false });
+            }
         } catch (error) {
             console.error('LichSOMA Speaker Stage | 백스테이지 추가 실패:', error);
         } finally {
@@ -1147,20 +1159,59 @@ export class SpeakerStage {
             const existingWrapper = container.find(`[data-actor-id="${actorId}"]`);
             
                 if (existingWrapper.length) {
-                    // 기존 액터 - 위치 클래스 업데이트
-                    existingWrapper.removeClass('left center right auto');
-                    if (position !== 'auto') {
-                        existingWrapper.addClass(position);
+                    // 제거 중인 wrapper인지 확인
+                    if (existingWrapper.hasClass('removing') || existingWrapper.hasClass('shrinking')) {
+                        // 제거 중인 wrapper는 즉시 제거하고 새로 생성
+                        existingWrapper.remove();
+                        
+                        // 새 액터로 처리
+                        const characterWithDialogueHTML = `
+                            <div class="stage-character-wrapper ${position} preparing" data-actor-id="${actorId}">
+                                <div class="stage-character">
+                                    <img src="${actorData.img}" alt="${actorData.name}">
+                                    <div class="character-name">${actorData.name}</div>
+                                </div>
+                                <div class="stage-dialogue-box" style="max-width: ${maxDialogueWidth}px;">
+                                    <div class="dialogue-content"></div>
+                                </div>
+                            </div>
+                        `;
+                        container.append(characterWithDialogueHTML);
+                        
+                        // 강제로 reflow 유도
+                        const wrapper = container.find(`[data-actor-id="${actorId}"]`);
+                        wrapper[0].offsetHeight;
+                        
+                        // 다음 프레임에 공간 확보 시작 (기존 액터 폭 줄어듦)
+                        requestAnimationFrame(() => {
+                            wrapper.removeClass('preparing').addClass('expanding');
+                            
+                            // 폭 확대 애니메이션이 끝난 후 슬라이드 인
+                            setTimeout(() => {
+                                wrapper.removeClass('expanding').addClass('slide-in-new');
+                                
+                                // 슬라이드 인 애니메이션 후 클래스 제거
+                                setTimeout(() => {
+                                    wrapper.removeClass('slide-in-new');
+                                }, 500);
+                            }, 600); // transition 시간(0.6초) 대기
+                        });
+                    } else {
+                        // 정상적인 기존 액터 - 위치 클래스 업데이트
+                        existingWrapper.removeClass('left center right auto');
+                        if (position !== 'auto') {
+                            existingWrapper.addClass(position);
+                        }
+                        
+                        // 이미지 업데이트 (감정 변경 시)
+                        const currentImg = existingWrapper.find('.stage-character img').attr('src');
+                        if (currentImg !== actorData.img) {
+                            existingWrapper.find('.stage-character img').attr('src', actorData.img);
+                        }
+                        
+                        // 대화창 크기 업데이트
+                        existingWrapper.find('.stage-dialogue-box').css('max-width', `${maxDialogueWidth}px`);
                     }
-                    
-                    // 이미지 업데이트 (감정 변경 시)
-                    const currentImg = existingWrapper.find('.stage-character img').attr('src');
-                    if (currentImg !== actorData.img) {
-                        existingWrapper.find('.stage-character img').attr('src', actorData.img);
-                    }
-                    
-                    // 대화창 크기 업데이트
-                    existingWrapper.find('.stage-dialogue-box').css('max-width', `${maxDialogueWidth}px`);
             } else {
                 // 새 액터 - 추가
                 const isNew = newActorIds.has(actorId);
