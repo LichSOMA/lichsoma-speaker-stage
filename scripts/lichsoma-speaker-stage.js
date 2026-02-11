@@ -864,6 +864,11 @@ export class SpeakerStage {
             // 항상 DOM 업데이트 (hidden 상태와 관계없이)
             this._updateStageOverlay();
             
+            // 백스테이지 업데이트 (GM만, on-stage 클래스 반영)
+            if (game.user.isGM) {
+                this._renderBackstage($(document));
+            }
+            
             // 모든 유저에게 액터 변경 브로드캐스트
             this._broadcastStageState();
         }
