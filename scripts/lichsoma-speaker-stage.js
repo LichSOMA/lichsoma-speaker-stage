@@ -1393,6 +1393,11 @@ export class SpeakerStage {
 
     // 채팅 메시지 처리
     static _onChatMessage(message) {
+        // smartphone 모듈의 공유 메시지 제외
+        if (message.flags?.['lichsoma-fvtt-smartphone']) {
+            return;
+        }
+        
         // IC 메시지만 처리 (일반 채팅)
         const messageStyle = message.style ?? message.type;
         const messageType = message.type;
@@ -1610,6 +1615,9 @@ export class SpeakerStage {
 
     // 타이핑 사운드 재생
     static _playTypingSound() {
+        // 스테이지가 활성화되어 있을 때만 재생
+        if (!this._stageActive) return;
+        
         const soundPath = game.settings.get(this.MODULE_ID, 'typingSoundPath');
         const volume = game.settings.get(this.MODULE_ID, 'typingSoundVolume');
         
