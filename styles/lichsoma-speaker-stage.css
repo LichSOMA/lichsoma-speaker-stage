@@ -71,9 +71,14 @@
     transition: filter 0.3s ease;
 }
 
-/* 스테이지에 올라간 액터는 컬러로 표시 */
+/* 스테이지에 올라간 액터는 컬러로 표시 + 노란색 하이라이트 */
 .actor-portrait.on-stage img {
-    filter: grayscale(0%);
+    filter: grayscale(0%) drop-shadow(0 0 1px #ffd700) drop-shadow(0 0 2px #ffd700);
+}
+
+/* 스테이지에 올라가 있고 현재 선택된 액터는 붉은색 하이라이트 */
+.actor-portrait.on-stage.selected-speaker img {
+    filter: grayscale(0%) drop-shadow(0 0 1px #ff3b30) drop-shadow(0 0 2px #ff3b30);
 }
 
 /* 액터 없음 메시지 */
@@ -135,6 +140,11 @@
 /* 활성화 상태 (narrator 버튼과 동일) */
 .lichsoma-speaker-selector .player-stage-toggle-btn[aria-pressed="true"] i {
     color: var(--color-warm-1) !important;
+}
+
+/* GM이 스테이지 ON + 플레이어는 OFF일 때만 전구 버튼 강조 */
+.lichsoma-speaker-selector .player-stage-toggle-btn.gm-stage-on[aria-pressed="false"] i {
+    color: #ff3b30 !important;
 }
 
 /* 스테이지 오버레이 (#interface 내부, #ui-right 제외 영역) */

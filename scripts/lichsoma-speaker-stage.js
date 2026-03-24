@@ -10,6 +10,7 @@ export class SpeakerStage {
     static MODULE_ID = 'lichsoma-speaker-stage';
     static _isRenderingBackstage = false;
     static _stageActive = false;
+    static _gmStageActive = false; // GM의 스테이지 ON 상태(플레이어 표시용)
     static _activeActors = new Map(); // actorId -> { img, name, position, dialogueVisible }
     static _previousActorIds = new Set(); // 이전 프레임의 액터 ID 추적
     static _currentTypingAnimations = new Map(); // actorId -> timeout ID
@@ -574,8 +575,8 @@ export class SpeakerStage {
             
             if (actorId) {
                 if (this._activeActors.has(actorId)) {
-                    // 이미 스테이지에 있으면 스피커 셀렉터에서 선택만
-                    this._selectSpeakerInSelector(actorId);
+                    // 이미 선택된 스피커를 다시 누르면 기본값으로 복귀
+                    this._toggleSpeakerSelectionInSelector(actorId);
                 } else {
                     // 스테이지에 없으면 올리고 스피커 선택
                     this._onPlayerActorToggle(actorId);
@@ -595,10 +596,17 @@ export class SpeakerStage {
                 : game.user.character;
             
             if (actorId && this._activeActors.has(actorId)) {
+                const wasSelected = this._isActorSelectedInSelector(actorId);
+
                 // 스테이지에서 내리기
                 this._activeActors.delete(actorId);
                 this._updateStageOverlay();
                 this._broadcastStageState();
+
+                // 현재 선택된 액터를 내렸다면 스피커 기본값으로 복귀
+                if (wasSelected) {
+                    this._resetSpeakerSelectorToDefault();
+                }
                 
                 // 버튼 상태 업데이트
                 actorToggleBtn.attr('aria-pressed', 'false');
@@ -625,6 +633,7 @@ export class SpeakerStage {
         // speaker selector에 추가 (순서대로)
         speakerSelector.append(actorToggleBtn);
         speakerSelector.append(stageToggleBtn);
+        this._updatePlayerStageButtonIndicator();
     }
 
     // 사이드바 상태 확인
@@ -765,6 +774,16 @@ export class SpeakerStage {
                     }
                 }, { passive: false });
             }
+
+            // 스피커 셀렉터 변경 시 선택된 액터 하이라이트 갱신
+            const dropdown = speakerSelector.find('.speaker-dropdown');
+            dropdown.off('change.lichsomaSpeakerStage');
+            dropdown.on('change.lichsomaSpeakerStage', () => {
+                this._updateBackstageSelectedSpeakerHighlight();
+            });
+
+            // 초기 하이라이트 적용
+            this._updateBackstageSelectedSpeakerHighlight();
         } catch (error) {
             console.error('LichSOMA Speaker Stage | 백스테이지 추가 실패:', error);
         } finally {
@@ -802,14 +821,16 @@ export class SpeakerStage {
         if (!actors || actors.length === 0) {
             return '<div class="no-actors">(등록된 액터 없음)</div>';
         }
+        const selectedActorId = this._getSelectedSpeakerActorId();
         
         return actors.map(actor => {
             const isOnStage = this._activeActors.has(actor.id);
             const stageClass = isOnStage ? 'on-stage' : '';
+            const selectedClass = isOnStage && selectedActorId === actor.id ? 'selected-speaker' : '';
             
             const actorImg = this._getActorImage(actor.id) || actor.img;
             return `
-                <div class="actor-portrait ${stageClass}" data-actor-id="${actor.id}" title="${actor.name}">
+                <div class="actor-portrait ${stageClass} ${selectedClass}" data-actor-id="${actor.id}" title="${actor.name}">
                     <img src="${actorImg}" alt="${actor.name}">
                 </div>
             `;
@@ -830,6 +851,11 @@ export class SpeakerStage {
             this._hideStageOverlay();
             // 액터 목록은 유지 (비활성화 시에도 백스테이지에 남아있음)
         }
+
+        // GM이 스테이지 토글 시 플레이어 버튼 상태 동기화
+        if (game.user?.isGM) {
+            this._broadcastGMStageState();
+        }
     }
 
     // 액터 포트레잇 좌클릭 처리 (스테이지에 올리기 또는 스피커 선택)
@@ -841,8 +867,8 @@ export class SpeakerStage {
 
         // 스테이지에 있는 액터면 스피커 선택만
         if (this._activeActors.has(actorId)) {
-            // 스피커 셀렉터 변경만 수행
-            this._selectSpeakerInSelector(actorId);
+            // 이미 선택된 스피커를 다시 누르면 기본값으로 복귀
+            this._toggleSpeakerSelectionInSelector(actorId);
         } else {
             // 스테이지에 없으면 스테이지에 올리기
             const actorImg = this._getActorImage(actorId) || actor.img;
@@ -917,7 +943,13 @@ export class SpeakerStage {
 
         // 이미 스테이지에 있으면 내리기
         if (this._activeActors.has(actorId)) {
+            const wasSelected = this._isActorSelectedInSelector(actorId);
             this._activeActors.delete(actorId);
+
+            // 현재 선택된 액터를 내렸다면 스피커 기본값으로 복귀
+            if (wasSelected) {
+                this._resetSpeakerSelectorToDefault();
+            }
         } else {
             // 새로운 액터를 스테이지에 올리기
             const actorImg = this._getActorImage(actorId) || actor.img;
@@ -969,6 +1001,79 @@ export class SpeakerStage {
             selector.value = optionValue;
             // 스피커 셀렉터 모듈의 선택 상태도 업데이트
             $(selector).trigger('change');
+            // change 훅 누락/지연 상황 대비 즉시 하이라이트 동기화
+            this._updateBackstageSelectedSpeakerHighlight();
+        }
+    }
+
+    // 현재 스피커 셀렉터에서 특정 액터가 선택되어 있는지 확인
+    static _isActorSelectedInSelector(actorId) {
+        const selector = document.querySelector('.lichsoma-speaker-selector .speaker-dropdown');
+        if (!selector) return false;
+
+        const userCharacterId = game.user.character instanceof Actor
+            ? game.user.character.id
+            : game.user.character;
+        const expectedValue = userCharacterId === actorId ? 'character' : `actor:${actorId}`;
+
+        return selector.value === expectedValue || selector.value === `actor:${actorId}`;
+    }
+
+    // 현재 스피커 셀렉터에서 선택된 액터 ID 가져오기
+    static _getSelectedSpeakerActorId() {
+        const selector = document.querySelector('.lichsoma-speaker-selector .speaker-dropdown');
+        if (!selector) return null;
+
+        const value = selector.value;
+        if (!value) return null;
+
+        if (value === 'character') {
+            return game.user.character instanceof Actor
+                ? game.user.character.id
+                : game.user.character || null;
+        }
+
+        if (value.startsWith('actor:')) {
+            return value.substring(6);
+        }
+
+        return null;
+    }
+
+    // 백스테이지에서 현재 선택된 스피커 하이라이트 상태 갱신
+    static _updateBackstageSelectedSpeakerHighlight() {
+        const selectedActorId = this._getSelectedSpeakerActorId();
+        const portraits = $(document).find('.lichsoma-speaker-backstage-container .actor-portrait');
+
+        portraits.removeClass('selected-speaker');
+        if (!selectedActorId) return;
+
+        portraits.each((index, element) => {
+            const portrait = $(element);
+            const actorId = portrait.attr('data-actor-id');
+            if (actorId && actorId === selectedActorId && portrait.hasClass('on-stage')) {
+                portrait.addClass('selected-speaker');
+            }
+        });
+    }
+
+    // 스피커 셀렉터를 기본값(첫 번째 옵션)으로 되돌리기
+    static _resetSpeakerSelectorToDefault() {
+        const selector = document.querySelector('.lichsoma-speaker-selector .speaker-dropdown');
+        if (!selector || !selector.options?.length) return;
+
+        selector.selectedIndex = 0;
+        $(selector).trigger('change');
+        // change 훅 누락/지연 상황 대비 즉시 하이라이트 동기화
+        this._updateBackstageSelectedSpeakerHighlight();
+    }
+
+    // 스피커 선택 토글: 이미 선택된 액터면 기본값으로 복귀, 아니면 해당 액터 선택
+    static _toggleSpeakerSelectionInSelector(actorId) {
+        if (this._isActorSelectedInSelector(actorId)) {
+            this._resetSpeakerSelectorToDefault();
+        } else {
+            this._selectSpeakerInSelector(actorId);
         }
     }
 
@@ -977,14 +1082,19 @@ export class SpeakerStage {
         game.socket.on('module.lichsoma-speaker-stage', (data) => {
             if (data.action === 'updateStage') {
                 this._receiveStageState(data);
+            } else if (data.action === 'updateGMStage') {
+                this._receiveGMStageState(data);
+            } else if (data.action === 'requestSync') {
+                this._handleSyncRequest(data);
+            } else if (data.action === 'syncState') {
+                this._receiveSyncState(data);
             }
         });
     }
 
-    // 스테이지 액터 목록 브로드캐스트
-    static _broadcastStageState() {
-        // 액터 정보를 직렬화 가능한 형태로 변환 (감정 정보 포함)
-        const actorsData = Array.from(this._activeActors.entries()).map(([id, data]) => {
+    // 현재 활성 액터 목록 직렬화
+    static _serializeActiveActors() {
+        return Array.from(this._activeActors.entries()).map(([id, data]) => {
             return {
                 id,
                 img: data.img,
@@ -997,10 +1107,59 @@ export class SpeakerStage {
                 emotionUserId: data.emotionUserId
             };
         });
+    }
 
+    // GM 스테이지 상태 브로드캐스트
+    static _broadcastGMStageState() {
+        game.socket.emit('module.lichsoma-speaker-stage', {
+            action: 'updateGMStage',
+            stageActive: this._stageActive,
+            userId: game.user.id
+        });
+    }
+
+    // GM 스테이지 상태 수신
+    static _receiveGMStageState(data) {
+        if (data.userId === game.user.id) return;
+        this._gmStageActive = !!data.stageActive;
+        this._updatePlayerStageButtonIndicator();
+    }
+
+    // 플레이어 스테이지 버튼에 GM 상태 표시 반영
+    static _updatePlayerStageButtonIndicator() {
+        if (game.user?.isGM) return;
+        const btn = $(document).find('.lichsoma-speaker-selector .player-stage-toggle-btn');
+        if (!btn.length) return;
+        btn.toggleClass('gm-stage-on', this._gmStageActive);
+    }
+
+    // 동기화 요청 처리 (GM만 응답)
+    static _handleSyncRequest(data) {
+        if (!game.user?.isGM) return;
+        if (!data?.requestUserId) return;
+
+        game.socket.emit('module.lichsoma-speaker-stage', {
+            action: 'syncState',
+            targetUserId: data.requestUserId,
+            userId: game.user.id,
+            gmStageActive: this._stageActive,
+            actors: this._serializeActiveActors()
+        });
+    }
+
+    // 전체 상태 동기화 수신 (요청한 유저만 반영)
+    static _receiveSyncState(data) {
+        if (data?.targetUserId !== game.user.id) return;
+        this._gmStageActive = !!data.gmStageActive;
+        this._updatePlayerStageButtonIndicator();
+        this._receiveStageState(data, { skipSenderCheck: true });
+    }
+
+    // 스테이지 액터 목록 브로드캐스트
+    static _broadcastStageState() {
         const stageData = {
             action: 'updateStage',
-            actors: actorsData,
+            actors: this._serializeActiveActors(),
             userId: game.user.id
         };
 
@@ -1008,9 +1167,9 @@ export class SpeakerStage {
     }
 
     // 스테이지 액터 목록 수신
-    static _receiveStageState(data) {
+    static _receiveStageState(data, options = {}) {
         // 자신이 보낸 메시지는 무시
-        if (data.userId === game.user.id) return;
+        if (!options.skipSenderCheck && data.userId === game.user.id) return;
 
         // 현재 DOM에 있는 액터들을 _previousActorIds로 설정
         const container = $('#lichsoma-stage-overlay .stage-characters-container');
@@ -1659,6 +1818,7 @@ Hooks.once('ready', () => {
     if (game.user.isGM) {
         // GM: 백스테이지 설정
         SpeakerStage.setupBackstage();
+        SpeakerStage._broadcastGMStageState();
         
         // 초기 렌더링 (speaker selector가 준비될 때까지 폴링)
         let attempts = 0;
@@ -1690,5 +1850,11 @@ Hooks.once('ready', () => {
             }
         };
         checkAndRender();
+
+        // 지연 접속 플레이어를 위한 초기 상태 동기화 요청
+        game.socket.emit('module.lichsoma-speaker-stage', {
+            action: 'requestSync',
+            requestUserId: game.user.id
+        });
     }
 });
