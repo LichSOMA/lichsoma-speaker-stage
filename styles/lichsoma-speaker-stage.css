@@ -1,0 +1,479 @@
+/**
+ * LichSOMA Speaker Stage Styles
+ */
+
+/* 백스테이지 전체 컨테이너 (백스테이지 + 토글 버튼) */
+.lichsoma-speaker-backstage-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 백스테이지 컨테이너 (액터 목록만) */
+.lichsoma-speaker-backstage {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    padding: 0px 4px;
+    background: var(--color-cool-5-75);
+    border-radius: 4px;
+    min-height: 32px;
+    overflow: hidden;
+}
+
+/* 액터 포트레잇 영역 */
+.backstage-actors {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+/* 스크롤바 숨김 (Webkit 브라우저) */
+.backstage-actors::-webkit-scrollbar {
+    display: none;
+}
+
+/* 액터 포트레잇 */
+.actor-portrait {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 2px solid var(--color-border-dark-tertiary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.actor-portrait:hover {
+    border-color: var(--color-border-highlight-alt);
+    transform: scale(1.1);
+}
+
+/* 스테이지에 올라간 액터 */
+.actor-portrait.on-stage {
+    border-color: #ffd700;
+}
+
+.actor-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(100%);
+    transition: filter 0.3s ease;
+}
+
+/* 스테이지에 올라간 액터는 컬러로 표시 + 노란색 하이라이트 */
+.actor-portrait.on-stage img {
+    filter: grayscale(0%) drop-shadow(0 0 1px #ffd700) drop-shadow(0 0 2px #ffd700);
+}
+
+/* 스테이지에 올라가 있고 현재 선택된 액터는 붉은색 하이라이트 */
+.actor-portrait.on-stage.selected-speaker img {
+    filter: grayscale(0%) drop-shadow(0 0 1px #ff3b30) drop-shadow(0 0 2px #ff3b30);
+}
+
+/* 액터 없음 메시지 */
+.no-actors {
+    color: var(--color-text-dark-secondary);
+    font-size: 12px;
+    font-style: italic;
+    text-align: center;
+    width: 100%;
+    padding: 8px;
+}
+
+/* 토글 버튼 (백스테이지 오른쪽, GM용) */
+.lichsoma-speaker-backstage-container .backstage-toggle-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    /* ui-control 클래스가 기본 스타일을 제공하므로 필요한 것만 추가 */
+}
+
+.lichsoma-speaker-backstage-container .backstage-toggle-btn i {
+    font-size: var(--font-size-16);
+}
+
+/* 활성화 상태 (narrator 버튼과 동일) */
+.lichsoma-speaker-backstage-container .backstage-toggle-btn[aria-pressed="true"] i {
+    color: var(--color-warm-1) !important;
+}
+
+/* 플레이어 캐릭터 토글 버튼 (speaker selector 안) */
+.lichsoma-speaker-selector .player-actor-toggle-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    /* ui-control 클래스가 기본 스타일을 제공하므로 필요한 것만 추가 */
+}
+
+.lichsoma-speaker-selector .player-actor-toggle-btn i {
+    font-size: var(--font-size-16);
+}
+
+/* 활성화 상태 (narrator 버튼과 동일) */
+.lichsoma-speaker-selector .player-actor-toggle-btn[aria-pressed="true"] i {
+    color: var(--color-warm-1) !important;
+}
+
+/* 플레이어 스테이지 토글 버튼 (speaker selector 안) */
+.lichsoma-speaker-selector .player-stage-toggle-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    /* ui-control 클래스가 기본 스타일을 제공하므로 필요한 것만 추가 */
+}
+
+.lichsoma-speaker-selector .player-stage-toggle-btn i {
+    font-size: var(--font-size-16);
+}
+
+/* 활성화 상태 (narrator 버튼과 동일) */
+.lichsoma-speaker-selector .player-stage-toggle-btn[aria-pressed="true"] i {
+    color: var(--color-warm-1) !important;
+}
+
+/* GM이 스테이지 ON + 플레이어는 OFF일 때만 전구 버튼 강조 */
+.lichsoma-speaker-selector .player-stage-toggle-btn.gm-stage-on[aria-pressed="false"] i {
+    color: #ff3b30 !important;
+}
+
+/* 스테이지 오버레이: 부모(#interface 등) 전체를 덮음 */
+#lichsoma-stage-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0);
+    pointer-events: none;
+    /* UI(#sidebar, 헤더 등)보다 낮게 — 배경 어둡기가 인터페이스를 덮지 않음 */
+    z-index: 25;
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out;
+}
+
+/* 숨김 상태 (페이드 아웃) */
+#lichsoma-stage-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* 캐릭터 영역: 예전 오버레이와 동일 너비(뷰포트 − 사이드바). JS가 --sidebar-width 갱신 */
+#lichsoma-stage-overlay .stage-characters-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: calc(100% - var(--sidebar-width, 300px));
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    /* center면 1↔2명일 때 :only-child 등 DOM 개수에 따라 가로 정렬이 바뀌어 1번 칼럼이 튐 — 항상 왼쪽부터 쌓음 */
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 0px 56px;
+    box-sizing: border-box;
+    overflow: hidden;
+    z-index: 100;
+    isolation: isolate;
+}
+
+/* 캐릭터 래퍼 (캐릭터 이미지 + 대화창) */
+.stage-character-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-height: 100%;
+    flex: 1 1 0;
+    min-width: 0;
+    /* 1·2인: 50%−6px(갭 12px 기준 슬롯) — JS가 액터 수에 맞게 --stage-column-max 갱신, 1→2 전환 시 칼럼 너비 유지 */
+    max-width: var(--stage-column-max, calc(50% - 6px));
+    transition: flex 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                flex-grow 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                flex-shrink 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                flex-basis 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                min-width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                max-width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: flex, width;
+}
+
+/* 새 액터 준비 상태 (공간을 차지하지 않음) */
+.stage-character-wrapper.preparing {
+    flex: 0 0 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden;
+}
+
+/* 공간 확보 상태 (보이지 않지만 공간은 차지) */
+.stage-character-wrapper.expanding {
+    opacity: 0 !important;
+    transform: translateX(150px) !important;
+}
+
+/* 새 액터 슬라이드 인 애니메이션 (오른쪽에서 왼쪽으로) */
+.stage-character-wrapper.slide-in-new {
+    animation: slideInFromRight 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes slideInFromRight {
+    0% {
+        opacity: 0;
+        transform: translateX(150px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* 액터 제거 애니메이션 (슬라이드 아웃만) */
+.stage-character-wrapper.removing {
+    animation: slideOutToRight 0.4s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
+    pointer-events: none;
+}
+
+@keyframes slideOutToRight {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(150px);
+    }
+}
+
+/* 액터 공간 축소 (슬라이드 아웃 후) */
+.stage-character-wrapper.shrinking {
+    flex: 0 0 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.stage-character-wrapper.left {
+    justify-self: flex-start;
+}
+
+.stage-character-wrapper.center {
+    justify-self: center;
+}
+
+.stage-character-wrapper.right {
+    justify-self: flex-end;
+}
+
+/* 개별 캐릭터 이미지 — 배경(.lichsoma-stage-background-img)보다 위에 그려지도록 명시 */
+.stage-character {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    flex: 1;
+    width: 100%;
+    max-height:400px;
+    /* fadeIn 애니메이션 제거 - wrapper의 slide-in-new만 사용 */
+}
+
+/* drop-shadow는 마스크와 같은 요소에 두면 직사각형으로 잘려 보임 → 래퍼에만 필터 적용 */
+.stage-character-portrait {
+    display: inline-block;
+    max-width: 250px;
+    max-height: 250px;
+    line-height: 0;
+    flex-shrink: 0;
+    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.5));
+}
+
+.stage-character-portrait img {
+    display: block;
+    max-width: 250px;
+    max-height: 250px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    object-position: bottom left;
+    /* 하단은 좌·우와 동일하게 가장자리 ~5%만 페이드, 좌우는 가로 그라데이션 — 겹치면 모서리가 더 부드럽게 끊김 */
+    -webkit-mask-image:
+        linear-gradient(
+            to top,
+            transparent 0%,
+            #fff 5%
+        ),
+        linear-gradient(
+            to right,
+            transparent 0%,
+            #fff 5%,
+            #fff 95%,
+            transparent 100%
+        );
+    -webkit-mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-composite: source-in;
+    mask-image:
+        linear-gradient(
+            to top,
+            transparent 0%,
+            #fff 5%
+        ),
+        linear-gradient(
+            to right,
+            transparent 0%,
+            #fff 5%,
+            #fff 95%,
+            transparent 100%
+        );
+    mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-composite: intersect;
+}
+
+/* 캐릭터 이름 (이미지 좌측 하단에 겹침) — 기본값은 테마·모듈 설정으로 덮어씀 */
+.stage-character .character-name {
+    position: absolute;
+    font-family: var(--font-body, sans-serif);
+    font-size: 32px;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    z-index: 10;
+}
+
+/* 개별 대화 상자 */
+.stage-dialogue-box {
+    background: rgba(0, 0, 0, 0.85);
+    padding: 10px 15px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    pointer-events: auto;
+    height: 180px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    overflow-wrap: break-word;
+    transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                max-width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: width;
+}
+
+
+/* 대화 내용 — 기본 폰트는 FVTT 본문(Speaker Selector 채팅 메시지와 동일 계열) */
+.dialogue-content {
+    font-family: var(--font-body, sans-serif);
+    font-size: var(--font-size-16, 16px);
+    color: #e0e0e0;
+    line-height: 1.6;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-all;
+    white-space: pre-wrap;
+    max-width: 100%;
+}
+
+/* 루비 문자 스타일 */
+.dialogue-content ruby.lichsoma-ruby {
+    ruby-position: over;
+}
+
+.dialogue-content ruby.lichsoma-ruby rt {
+    font-size: 0.6em;
+    opacity: 0.8;
+}
+
+/* 마크다운 스타일 */
+.dialogue-content strong {
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.dialogue-content em {
+    font-style: italic;
+}
+
+.dialogue-content del {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+/* 대화 내용 스크롤바 스타일 */
+.dialogue-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dialogue-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.dialogue-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.dialogue-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+
+/* 페이드인 애니메이션 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 반응형 조정 */
+@media (max-width: 768px) {
+    .lichsoma-speaker-backstage-container {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .lichsoma-speaker-backstage {
+        width: 100%;
+    }
+    
+    .backstage-actors {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .backstage-toggle-btn {
+        width: 100%;
+        height: 36px;
+    }
+
+    .stage-character-wrapper {
+        max-width: min(300px, var(--stage-column-max, calc(50% - 6px)));
+    }
+
+    .dialogue-content {
+        font-size: var(--font-size-14, 14px);
+    }
+}

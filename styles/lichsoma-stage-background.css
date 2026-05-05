@@ -1,0 +1,536 @@
+/**
+ * 스테이지 배경 — 일반 모드는 Primary Canvas(토큰 스프라이트 아래), 내러티브 모드는 Interface(TokenLayer 위).
+ * 오버레이에는 16:9 정렬 기준 + 장면 셀렉트만 + 설정 창 그리드
+ */
+
+/* 하단 대화·입력 줄 높이 — 이 영역만큼 빼고 16:9 프레임을 세로 중앙 배치 */
+#lichsoma-stage-overlay {
+    --stage-bg-dialogue-strip: 200px;
+}
+
+/* 뷰포트 − 사이드바와 동일 폭(.stage-characters-container와 맞춤). PIXI 배경 동기화도 이 프레임 rect 기준 */
+#lichsoma-stage-overlay .lichsoma-stage-background-shell {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: calc(100% - var(--sidebar-width, 300px));
+    max-width: calc(100% - var(--sidebar-width, 300px));
+    height: 100%;
+    box-sizing: border-box;
+    padding-top: 16px;
+    padding-bottom: calc(var(--stage-bg-dialogue-strip, 200px));
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    pointer-events: none;
+}
+
+#lichsoma-stage-overlay .lichsoma-stage-background-shell--overlay-ui {
+    z-index: 5;
+}
+
+/* 풀 모드 내러티브: 포인터 바닥(.lichsoma-stage-bg-narrative-full-blocker)보다 셸·프레임 바 전체가 위로 */
+#lichsoma-stage-overlay .lichsoma-stage-background-shell--above-narrative-pointer-floor.lichsoma-stage-background-shell--overlay-ui {
+    z-index: 12;
+}
+
+/* 스테이지 영역(사이드바 제외 폭) 전체 막기 — `.stage-characters-container`(speaker-stage.css z-index 100)보다만 낮음 */
+#lichsoma-stage-overlay > .lichsoma-stage-bg-narrative-full-blocker {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: calc(100% - var(--sidebar-width, 300px));
+    max-width: calc(100% - var(--sidebar-width, 300px));
+    height: 100%;
+    box-sizing: border-box;
+    z-index: 8;
+    pointer-events: none;
+}
+
+#lichsoma-stage-overlay.lichsoma-stage-overlay--narrative-full-pointer-block > .lichsoma-stage-bg-narrative-full-blocker {
+    pointer-events: auto;
+}
+
+/* 가용 높이·폭 측정용 — 패딩 제외 영역 안에 16:9 박스가 완전히 들어가게 함 */
+#lichsoma-stage-overlay .lichsoma-stage-background-shell-inner {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    container-type: size;
+    container-name: stage-bg-frame-area;
+}
+
+/* 미니 모드: 패딩 안쪽 우측 상단 — 가용 영역 오른쪽 가장자리에서 16px 안쪽 */
+#lichsoma-stage-overlay .lichsoma-stage-background-shell--mini .lichsoma-stage-background-shell-inner {
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding-right: 16px;
+    box-sizing: border-box;
+}
+
+#lichsoma-stage-overlay .lichsoma-stage-background-shell--mini .lichsoma-stage-background-frame {
+    width: min(480px, 100cqw, calc(100cqh * 16 / 9));
+    max-width: min(480px, 100cqw);
+    height: auto;
+    aspect-ratio: 16 / 9;
+    max-height: min(270px, 100cqh);
+    flex-shrink: 0;
+}
+
+/*
+ * 폭만 100%로 두면 aspect-ratio 높이가 padding-bottom/top 안쪽을 넘김.
+ * min(가용폭, 가용높이×16/9) 로 폭을 제한하면 높이는 자동으로 가용 높이 이하로 유지됨.
+ */
+#lichsoma-stage-overlay .lichsoma-stage-background-frame {
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+    box-sizing: border-box;
+    width: min(100cqw, calc(100cqh * 16 / 9));
+    max-width: 100cqw;
+    max-height: 100cqh;
+    aspect-ratio: 16 / 9;
+    height: auto;
+    flex-shrink: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+#lichsoma-stage-overlay .lichsoma-stage-background-frame--overlay-ui {
+    box-shadow: none;
+    background: transparent;
+}
+
+/* 내러티브 + 미니 모드: 프레임 영역만 맵으로 포인터 차단(풀 모드는 위 전역 블로커 사용). 씬 바는 z-index로 위 */
+#lichsoma-stage-overlay .lichsoma-stage-bg-narrative-blocker {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+#lichsoma-stage-overlay .lichsoma-stage-background-frame--narrative .lichsoma-stage-bg-narrative-blocker {
+    pointer-events: auto;
+}
+
+/* 16:9 프레임 안 우측 상단 — 미니 토글·셀렉트(GM만 슬롯 변경) */
+#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-scene-bar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    pointer-events: auto;
+    padding: 8px;
+    max-width: calc(100% - 16px);
+}
+
+#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-mini-toggle {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--color-text-light-highlight, #f0f0f0);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--color-text-light-highlight, #f0f0f0);
+    opacity: 0.25;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-mini-toggle:hover {
+    opacity: 1;
+    border-color: #ffbb00;
+    color: #ffbb00;
+    background: rgba(0, 0, 0, 0.75);
+}
+
+#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-scene-select {
+    width: auto;
+    min-width: 120px;
+    max-width: min(240px, 42vw);
+    height: 28px;
+    font-size: 12px;
+    padding: 2px 8px;
+}
+
+/* GM만 표시 — 호버 전 투명도 0.5 (플레이어는 스크립트로 숨김) */
+#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-scene-select:not(.lichsoma-stage-bg-scene-select--players-hidden) {
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+}
+
+#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-scene-select:not(.lichsoma-stage-bg-scene-select--players-hidden):hover {
+    opacity: 1;
+}
+
+.lichsoma-stage-bg-scene-select--players-hidden {
+    display: none !important;
+}
+
+#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-scene-select:disabled {
+    cursor: default;
+}
+
+/* ─── 설정(ApplicationV2) ─── */
+.application.lichsoma-stage-background-setting-app {
+    min-width: 680px;
+    min-height: 480px;
+}
+
+.application.lichsoma-stage-background-setting-app .window-content.lichsoma-stage-background-setting-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    padding: 12px 16px;
+}
+
+.lichsoma-stage-bg-app-inner {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.lichsoma-stage-bg-setting-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.lichsoma-stage-bg-setting-toolbar label {
+    font-weight: 600;
+}
+
+.lichsoma-stage-bg-setting-toolbar select {
+    min-width: 220px;
+    max-width: 100%;
+}
+
+.lichsoma-stage-bg-setting-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 4px;
+    border: 1px solid var(--color-border-light-primary, #444);
+    border-radius: 6px;
+    background: var(--color-cool-5, #1a1a1a);
+}
+
+.lichsoma-stage-bg-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.lichsoma-stage-bg-slot {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border: 2px dashed var(--color-border-light-primary, #666);
+    border-radius: 6px;
+    background: var(--color-bg-tint, #222);
+    cursor: grab;
+    overflow: hidden;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lichsoma-stage-bg-slot:active {
+    cursor: grabbing;
+}
+
+.lichsoma-stage-bg-slot--dragging {
+    opacity: 0.55;
+}
+
+.lichsoma-stage-bg-slot--drag-over {
+    border-color: #ffbb00;
+    box-shadow: inset 0 0 0 2px rgba(255, 187, 0, 0.45);
+}
+
+.lichsoma-stage-bg-slot:hover {
+    border-color: #ffbb00;
+}
+
+/* 선택된 슬롯(배경 목록에서 활성) — 점선 테두리 색 */
+.lichsoma-stage-bg-slot.is-active-slot {
+    border-color: #ffbb00;
+    box-shadow: 0 0 0 2px rgba(255, 187, 0, 0.35);
+}
+
+/* 빈 슬롯(단일 모드): 이미지 추가 영역 호버 시 점선 테두리 */
+.lichsoma-stage-bg-slot:has(> .lichsoma-stage-bg-slot-placeholder):hover {
+    border-color: #ffbb00;
+}
+
+/* 시간대 연동: 빈 칸(+) 위 호버 시 슬롯 점선 테두리 */
+.lichsoma-stage-bg-slot--time-variant:has(.lichsoma-stage-bg-time-placeholder-inner:hover) {
+    border-color: #ffbb00;
+}
+
+.lichsoma-stage-bg-slot-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+.lichsoma-stage-bg-slot-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--color-text-dark-secondary, #888);
+    font-size: 12px;
+    text-align: center;
+    padding: 8px;
+    pointer-events: none;
+}
+
+.lichsoma-stage-bg-slot-clear {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: #fff;
+    cursor: pointer;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.lichsoma-stage-bg-slot:hover .lichsoma-stage-bg-slot-clear {
+    opacity: 1;
+}
+
+.lichsoma-stage-bg-slot-clear:hover {
+    border: 2px dashed #dc3545;
+    background: rgb(255, 255, 255, 0.5);
+    color: #dc3545;
+}
+
+/* 슬롯 표시 이름 (미리보기 하단 오버레이) */
+.lichsoma-stage-bg-slot-name-row {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 4;
+    padding: 6px 8px 8px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.88), transparent);
+    pointer-events: auto;
+    box-sizing: border-box;
+}
+
+.lichsoma-stage-bg-slot-name {
+    width: 100%;
+    box-sizing: border-box;
+    height: 26px;
+    padding: 2px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--color-text-light-highlight, #f0f0f0);
+    font-size: 12px;
+}
+
+.lichsoma-stage-bg-slot-name:focus {
+    outline: none;
+    border-color: #ffbb00;
+    background: rgba(0, 0, 0, 0.75);
+}
+
+/* 시간대 연동: 미리보기(추가·삭제 제외) 드래그로 순서 변경, 이름은 하단 오버레이 */
+.lichsoma-stage-bg-slot--time-variant {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    cursor: grab;
+    aspect-ratio: unset;
+    box-sizing: border-box;
+}
+
+.lichsoma-stage-bg-slot--time-variant:active {
+    cursor: grabbing;
+}
+
+.lichsoma-stage-bg-slot--time-variant .lichsoma-stage-bg-slot-name-row {
+    cursor: text;
+}
+
+/* 16:9 미리보기 박스 — 이름 줄이 이 영역 하단에 겹침 */
+.lichsoma-stage-bg-slot-time-stack {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    flex-shrink: 0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.lichsoma-stage-bg-slot--time-variant .lichsoma-stage-bg-slot-time-strip {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+}
+
+.lichsoma-stage-bg-time-cell {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.lichsoma-stage-bg-time-cell:last-child {
+    border-right: none;
+}
+
+.lichsoma-stage-bg-time-label {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.lichsoma-stage-bg-time-media {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+}
+
+/* 각 칸 너비의 1/3만 보이게 배경을 가로 3배로 깔고 위치로 좌·중·우 1/3 선택 */
+.lichsoma-stage-bg-time-slice {
+    background-repeat: no-repeat;
+    background-size: 300% 100%;
+}
+
+.lichsoma-stage-bg-time-slice--left {
+    background-position: left center;
+}
+
+.lichsoma-stage-bg-time-slice--center {
+    background-position: center center;
+}
+
+.lichsoma-stage-bg-time-slice--right {
+    background-position: right center;
+}
+
+/* 빈 칸: 미디어 영역 정중앙에 추가(+) 조작 — 드래그 제외는 스크립트에서 처리 */
+.lichsoma-stage-bg-time-placeholder-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    cursor: pointer;
+}
+
+.lichsoma-stage-bg-time-placeholder-inner .lichsoma-stage-bg-time-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 255, 255, 0.35);
+    background: rgba(0, 0, 0, 0.45);
+    color: var(--color-text-dark-secondary, #aaa);
+    font-size: 15px;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.lichsoma-stage-bg-time-cell:hover .lichsoma-stage-bg-time-placeholder-inner .lichsoma-stage-bg-time-add-btn {
+    border-color: #ffbb00;
+    color: #ffbb00;
+}
+
+/* 이미지 있는 칸: 정중앙 삭제 — 호버 시 표시 */
+.lichsoma-stage-bg-time-clear {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: #fff;
+    cursor: pointer;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.lichsoma-stage-bg-time-cell:hover .lichsoma-stage-bg-time-clear {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.lichsoma-stage-bg-time-clear:hover {
+    border: 2px dashed #dc3545;
+    background: rgb(255, 255, 255, 0.5);
+    color: #dc3545;
+}
+
+.lichsoma-stage-bg-hint {
+    font-size: 11px;
+    color: var(--color-text-dark-secondary, #999);
+    flex-shrink: 0;
+}
