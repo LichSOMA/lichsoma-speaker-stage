@@ -397,6 +397,10 @@
     max-width: 100%;
 }
 
+.dialogue-content p {
+    margin: 0;
+}
+
 /* 루비 문자 스타일 */
 .dialogue-content ruby.lichsoma-ruby {
     ruby-position: over;
