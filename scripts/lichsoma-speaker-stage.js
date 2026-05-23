@@ -21,6 +21,10 @@ export class SpeakerStage {
     static _textClearTimeouts = new Map(); // actorId -> clear timeout ID
     static _fontChoicesUpdated = false; // 폰트 목록 업데이트 완료 플래그
     static _portraitFadeTimers = new WeakMap(); // 포트레잇 페이드 교체 타이머
+    static _directChatInputDetectionBound = false; // 직접 입력 감지 이벤트 등록 여부
+    static _directChatInputPendingUntil = 0; // 직접 입력으로 생성될 메시지 허용 시각
+    static _directChatInputPendingText = ''; // 직접 입력 원문 비교용
+    static _directChatInputPendingUserId = null; // 직접 입력 유저
 
     /** @type {ResizeObserver | null} dx3rd-action-hud와 동일하게 #sidebar 관측 */
     static _stageSidebarRO = null;
@@ -75,6 +79,9 @@ export class SpeakerStage {
         // 감정 변경 감지 설정
         this.setupEmotionChangeDetection();
         
+        // 채팅 입력창에서 직접 보낸 메시지 감지 설정
+        this.setupChatInputDetection();
+
         // 채팅 메시지 감지 설정
         this.setupChatMessageListener();
         
@@ -168,10 +175,10 @@ export class SpeakerStage {
             config: true,
             restricted: true,
             type: Number,
-            default: 16,
+            default: 24,
             range: {
                 min: 12,
-                max: 20,
+                max: 36,
                 step: 1
             },
             onChange: value => {
@@ -1909,8 +1916,179 @@ export class SpeakerStage {
         });
     }
 
+    static _isChatInputElement(element) {
+        if (!element) return false;
+
+        if (element.closest?.('.app.window-app.actor, .application.actor, .actor.sheet, .item.sheet')) {
+            return false;
+        }
+
+        const form = element.closest?.('#chat-form, .chat-form, form[data-application-part="chat-form"], form');
+        if (!form) return false;
+
+        return !!form.closest?.('#sidebar, #chat, .chat-sidebar, [data-tab="chat"]')
+            || form.id === 'chat-form'
+            || form.classList?.contains('chat-form')
+            || form.matches?.('form[data-application-part="chat-form"]');
+    }
+
+    static _getChatInputTextFromElement(element) {
+        const form = element?.closest?.('#chat-form, .chat-form, form[data-application-part="chat-form"], form') || null;
+        const input = form?.querySelector?.('textarea[name="message"], textarea, [contenteditable="true"]')
+            || (element?.matches?.('textarea, [contenteditable="true"]') ? element : null);
+
+        if (!input) return '';
+
+        if (input.matches?.('[contenteditable="true"]')) {
+            return input.innerText || input.textContent || '';
+        }
+
+        return input.value || '';
+    }
+
+    static _isDirectChatInputExcludedCommand(text) {
+        if (!text) return false;
+
+        // /desc는 장면/묘사용 채팅으로 취급하고 스테이지 대화창에는 표시하지 않는다.
+        return /^\s*\/desc\b/i.test(String(text));
+    }
+
+    static _normalizeDirectDialogueText(text) {
+        if (!text) return '';
+
+        let value = String(text);
+
+        if (/<[a-z][\s\S]*>/i.test(value)) {
+            const div = document.createElement('div');
+            div.innerHTML = value;
+            div.querySelectorAll('rt').forEach((rt) => rt.remove());
+            value = div.textContent || div.innerText || '';
+        }
+
+        return value
+            // Foundry /ic, /em 같은 직접 입력 명령은 원문 비교에서 명령어 부분만 제거
+            .replace(/^\s*\/[a-zA-Z]+\s+/, '')
+            // LichSOMA 루비 원문 [[텍스트|루비]]는 표시 텍스트 기준으로 비교
+            .replace(/\[\[([^|\]]+?)\|[^\]]+?\]\]/g, '$1')
+            // 간단한 마크다운 기호 제거
+            .replace(/\*\*\*([^*]+?)\*\*\*/g, '$1')
+            .replace(/\*\*([^*]+?)\*\*/g, '$1')
+            .replace(/\*([^*]+?)\*/g, '$1')
+            .replace(/~~([^~]+?)~~/g, '$1')
+            .replace(/~([^~]+?)~/g, '$1')
+            .replace(/[`_]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    static _markDirectChatInput(element) {
+        if (!this._isChatInputElement(element)) return;
+
+        const text = this._getChatInputTextFromElement(element);
+        if (!text || !text.trim()) return;
+
+        this._directChatInputPendingText = text;
+        this._directChatInputPendingUntil = Date.now() + 3000;
+        this._directChatInputPendingUserId = game.user?.id || null;
+    }
+
+    static setupChatInputDetection() {
+        if (this._directChatInputDetectionBound) return;
+        this._directChatInputDetectionBound = true;
+
+        document.addEventListener('submit', (event) => {
+            if (this._isChatInputElement(event.target)) {
+                this._markDirectChatInput(event.target);
+            }
+        }, true);
+
+        document.addEventListener('keydown', (event) => {
+            if (event.isComposing) return;
+            if (event.key !== 'Enter') return;
+            if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+            if (!this._isChatInputElement(event.target)) return;
+
+            this._markDirectChatInput(event.target);
+        }, true);
+
+        document.addEventListener('click', (event) => {
+            const button = event.target?.closest?.('button, a, [role="button"]');
+            if (!button) return;
+
+            const action = button.dataset?.action || '';
+            const looksLikeSend =
+                action === 'send' ||
+                action === 'sendMessage' ||
+                action === 'createMessage' ||
+                button.classList?.contains('chat-submit') ||
+                button.querySelector?.('.fa-paper-plane, .fa-comment, .fa-message');
+
+            if (!looksLikeSend) return;
+            if (!this._isChatInputElement(button)) return;
+
+            this._markDirectChatInput(button);
+        }, true);
+    }
+
+    static _consumeDirectChatInputForMessage(message) {
+        const now = Date.now();
+        if (now > this._directChatInputPendingUntil) return false;
+        if (this._directChatInputPendingUserId && this._directChatInputPendingUserId !== game.user?.id) return false;
+
+        if (this._isDirectChatInputExcludedCommand(this._directChatInputPendingText)) {
+            this._directChatInputPendingUntil = 0;
+            this._directChatInputPendingText = '';
+            this._directChatInputPendingUserId = null;
+            return false;
+        }
+
+        const pendingText = this._normalizeDirectDialogueText(this._directChatInputPendingText);
+        const messageText = this._normalizeDirectDialogueText(message?.content || '');
+
+        if (pendingText && messageText) {
+            const matches = pendingText === messageText
+                || pendingText.includes(messageText)
+                || messageText.includes(pendingText);
+
+            if (!matches) return false;
+        }
+
+        this._directChatInputPendingUntil = 0;
+        this._directChatInputPendingText = '';
+        this._directChatInputPendingUserId = null;
+
+        return true;
+    }
+
+    static _markMessageAsDirectChatInput(message) {
+        if (!message) return;
+
+        const existingFlags = message.flags?.[this.MODULE_ID] || {};
+        const stageFlags = foundry.utils.mergeObject(existingFlags, {
+            directChatInput: true
+        }, { inplace: false });
+
+        message.updateSource({
+            flags: {
+                [this.MODULE_ID]: stageFlags
+            }
+        });
+    }
+
+    static _isDirectChatInputMessage(message) {
+        return message?.flags?.[this.MODULE_ID]?.directChatInput === true;
+    }
+
     // 채팅 메시지 리스너 설정
     static setupChatMessageListener() {
+        Hooks.on('preCreateChatMessage', (message, data, options, userId) => {
+            if (userId !== game.user?.id) return;
+
+            if (this._consumeDirectChatInputForMessage(message)) {
+                this._markMessageAsDirectChatInput(message);
+            }
+        });
+
         Hooks.on('createChatMessage', (message) => {
             this._onChatMessage(message);
         });
@@ -1923,6 +2101,10 @@ export class SpeakerStage {
             return;
         }
         
+        // 채팅 입력창에서 직접 작성한 메시지만 스테이지 대화창에 표시한다.
+        // 액터 시트, 아이템 시트, 시스템 카드에서 출력한 IC 메시지는 제외한다.
+        if (!this._isDirectChatInputMessage(message)) return;
+
         // IC 메시지만 처리 (일반 채팅)
         const messageStyle = message.style ?? message.type;
         const messageType = message.type;
