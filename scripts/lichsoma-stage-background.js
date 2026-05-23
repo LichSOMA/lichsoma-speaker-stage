@@ -178,6 +178,8 @@ export class StageBackground {
     static _stageBgInterfaceRoot = null;
     /** 내러티브 모드: 루트 안 교차 페이드용 스프라이트 2장 */
     static _stageBgInterfaceSprites = null;
+    /** 비내러티브 모드: canvas.primary에 직접 붙는 일반 PIXI.Sprite 2장 — PrimarySpriteMesh의 Scene clipping 회피 */
+    static _stageBgPrimarySprites = null;
     /** @type {number} 0 또는 1 — 페이드 종료 후 현재 이미지를 들고 있는 메시 */
     static _stageBgStableIdx = 0;
     /** 마지막으로 표시에 성공한 이미지 URL(route 후) — 동일 선택 시 페이드 생략 */
@@ -442,7 +444,116 @@ export class StageBackground {
 
     /** @returns {unknown[]|null} 교차 페이드 대상 2개(메시 또는 스프라이트) */
     static _stageBgDrawablePair() {
-        return this._stageBgUsesInterfaceLayer() ? this._stageBgInterfaceSprites : this._stageBgMeshes;
+        return this._stageBgUsesInterfaceLayer() ? this._stageBgInterfaceSprites : this._stageBgPrimarySprites;
+    }
+
+    static _stageBgUsesSpriteLayer() {
+        return this._stageBgUsesInterfaceLayer() || !!this._stageBgPrimarySprites;
+    }
+
+    static _destroyPrimaryStageBgSprites() {
+        const sprites = this._stageBgPrimarySprites;
+        this._stageBgPrimarySprites = null;
+        if (!sprites?.length) return;
+
+        for (const s of sprites) {
+            if (!s || s.destroyed) continue;
+            try {
+                canvas?.primary?.removeChild(s);
+            } catch {
+                /* noop */
+            }
+            try {
+                s.destroy({ children: true });
+            } catch {
+                /* noop */
+            }
+        }
+    }
+
+    static _getPrimaryStageBgSortLayer() {
+        try {
+            const SORT = foundry.canvas.groups.PrimaryCanvasGroup.SORT_LAYERS;
+            if (typeof SORT?.TOKENS === 'number') return SORT.TOKENS - 1;
+        } catch {
+            /* noop */
+        }
+        return 699;
+    }
+
+    static _ensurePrimaryStageBgSprites() {
+        if (!canvas?.ready || !canvas.primary) return;
+
+        const sprites = this._stageBgPrimarySprites;
+        const healthy =
+            sprites?.[0] &&
+            !sprites[0].destroyed &&
+            sprites?.[1] &&
+            !sprites[1].destroyed &&
+            sprites[0].parent === canvas.primary &&
+            sprites[1].parent === canvas.primary;
+
+        if (healthy) {
+            const sortLayer = this._getPrimaryStageBgSortLayer();
+            for (const s of sprites) {
+                s.sortLayer = sortLayer;
+                s.sort = s === sprites[0] ? -999998 : -999997;
+            }
+            try {
+                if (canvas.primary.sortDirty !== undefined) canvas.primary.sortDirty = true;
+            } catch {
+                /* noop */
+            }
+            return;
+        }
+
+        if (this._stageBgMeshes?.length) {
+            for (const m of this._stageBgMeshes) {
+                if (!m || m.destroyed) continue;
+                try {
+                    canvas.primary?.removeChild(m);
+                } catch {
+                    /* noop */
+                }
+                try {
+                    m.destroy({ children: true });
+                } catch {
+                    /* noop */
+                }
+            }
+            this._stageBgMeshes = null;
+        }
+
+        this._destroyInterfaceStageBgSprites();
+        this._destroyPrimaryStageBgSprites();
+
+        const sortLayer = this._getPrimaryStageBgSortLayer();
+        const mkSprite = (sort) => {
+            const s = new PIXI.Sprite(PIXI.Texture.EMPTY);
+            s.name = 'lichsoma-speaker-stage-bg-primary-sprite';
+            s.eventMode = 'none';
+            s.anchor?.set(0, 0);
+            s.sortLayer = sortLayer;
+            s.sort = sort;
+            s.alpha = 1;
+            s.visible = false;
+            return s;
+        };
+
+        const sUnder = mkSprite(-999998);
+        const sOver = mkSprite(-999997);
+
+        canvas.primary.addChild(sUnder);
+        canvas.primary.addChild(sOver);
+
+        try {
+            if (canvas.primary.sortDirty !== undefined) canvas.primary.sortDirty = true;
+        } catch {
+            /* noop */
+        }
+
+        this._stageBgPrimarySprites = [sUnder, sOver];
+        this._stageBgStableIdx = 0;
     }
 
     static _destroyInterfaceStageBgSprites() {
@@ -495,6 +606,7 @@ export class StageBackground {
             this._stageBgMeshes = null;
         }
 
+        this._destroyPrimaryStageBgSprites();
         this._destroyInterfaceStageBgSprites();
 
         const mkSprite = (sort) => {
@@ -576,13 +688,13 @@ export class StageBackground {
         else overlayEl.appendChild(blocker);
     }
 
-    /** 일반 모드: Primary 메시만 유지 · 내러티브: Interface 스프라이트만 유지(settings 변경 시 리로드 가정) */
+    /** 일반 모드: canvas.primary 일반 스프라이트 · 내러티브: Interface 스프라이트(settings 변경 시 리로드 가정) */
     static _ensureStageBackgroundPixi() {
         if (!canvas?.ready) return;
         if (this._stageBgUsesInterfaceLayer()) {
             this._ensureInterfaceStageBgSprites();
         } else {
-            this._ensurePrimaryStageBgMeshes();
+            this._ensurePrimaryStageBgSprites();
         }
         this._registerStageBgCanvasHooks();
         this._attachStageBgTicker();
@@ -725,6 +837,7 @@ export class StageBackground {
                 }
             }
         }
+        this._destroyPrimaryStageBgSprites();
         this._destroyInterfaceStageBgSprites();
     }
 
@@ -776,8 +889,8 @@ export class StageBackground {
         const drawables = this._stageBgDrawablePair();
         if (!drawables?.length || !canvas?.ready) return;
 
-        const useIface = this._stageBgUsesInterfaceLayer();
-        if (!useIface) this._syncStageBgMeshesElevation();
+        const useSpriteLayer = this._stageBgUsesSpriteLayer();
+        if (!useSpriteLayer) this._syncStageBgMeshesElevation();
 
         const frame = document.querySelector('#lichsoma-stage-overlay .lichsoma-stage-background-frame');
         if (!frame) {
@@ -807,7 +920,7 @@ export class StageBackground {
 
             const texReady = drawable.texture?.valid && drawable.texture !== PIXI.Texture.EMPTY;
 
-            if (!useIface) {
+            if (!useSpriteLayer) {
                 if (drawable.anchor) drawable.anchor.set(0, 0);
                 drawable.position.set(x, y);
                 if (!texReady) continue;
@@ -826,8 +939,9 @@ export class StageBackground {
             } else {
                 if (!texReady) continue;
                 /**
-                 * Interface 그룹은 팬·줌 시 스테이지 변환을 따라가므로,
-                 * x/y(월드 좌표)가 계속 변한다. w/h가 동일해도 항상 cover 배치를 갱신해야 화면 고정 rect를 유지한다.
+                 * 일반 PIXI.Sprite는 PrimarySpriteMesh의 Scene clipping을 피하면서도
+                 * canvas.primary의 sortLayer로 토큰 바로 아래에 정렬된다.
+                 * Interface 스프라이트도 같은 cover 배치를 사용한다.
                  */
                 this._applySpriteTextureCover(drawable, drawable.texture, x, y, w, h);
                 drawable._lichsomaLayoutW = w;

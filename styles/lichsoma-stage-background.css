@@ -6,15 +6,17 @@
 /* 하단 대화·입력 줄 높이 — 이 영역만큼 빼고 16:9 프레임을 세로 중앙 배치 */
 #lichsoma-stage-overlay {
     --stage-bg-dialogue-strip: 200px;
+    --stage-bg-left-margin: 104px;
+    --stage-bg-right-gap: 16px;
 }
 
-/* 뷰포트 − 사이드바와 동일 폭(.stage-characters-container와 맞춤). PIXI 배경 동기화도 이 프레임 rect 기준 */
+/* 좌측 툴바와 우측 사이드바를 피한 스테이지 배경 영역. PIXI 배경 동기화도 이 프레임 rect 기준 */
 #lichsoma-stage-overlay .lichsoma-stage-background-shell {
     position: absolute;
-    left: 0;
+    left: var(--stage-bg-left-margin, 104px);
     bottom: 0;
-    width: calc(100% - var(--sidebar-width, 300px));
-    max-width: calc(100% - var(--sidebar-width, 300px));
+    width: max(0px, calc(100% - var(--sidebar-width, 300px) - var(--stage-bg-left-margin, 104px) - var(--stage-bg-right-gap, 16px)));
+    max-width: max(0px, calc(100% - var(--sidebar-width, 300px) - var(--stage-bg-left-margin, 104px) - var(--stage-bg-right-gap, 16px)));
     height: 100%;
     box-sizing: border-box;
     padding-top: 16px;
@@ -38,10 +40,10 @@
 /* 스테이지 영역(사이드바 제외 폭) 전체 막기 — `.stage-characters-container`(speaker-stage.css z-index 100)보다만 낮음 */
 #lichsoma-stage-overlay > .lichsoma-stage-bg-narrative-full-blocker {
     position: absolute;
-    left: 0;
+    left: var(--stage-bg-left-margin, 104px);
     bottom: 0;
-    width: calc(100% - var(--sidebar-width, 300px));
-    max-width: calc(100% - var(--sidebar-width, 300px));
+    width: max(0px, calc(100% - var(--sidebar-width, 300px) - var(--stage-bg-left-margin, 104px) - var(--stage-bg-right-gap, 16px)));
+    max-width: max(0px, calc(100% - var(--sidebar-width, 300px) - var(--stage-bg-left-margin, 104px) - var(--stage-bg-right-gap, 16px)));
     height: 100%;
     box-sizing: border-box;
     z-index: 8;
