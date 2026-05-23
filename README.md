@@ -51,3 +51,8 @@ MIT License
 ## 크레딧
 
 제작: LichSoma
+
+## 패치 노트
+
+**2.1.0**
+LichSOMA's Speaker Selector 2.1.0 버전과 호환성 개선선 

@@ -20,6 +20,7 @@ export class SpeakerStage {
     static _currentTypingAnimations = new Map(); // actorId -> timeout ID
     static _textClearTimeouts = new Map(); // actorId -> clear timeout ID
     static _fontChoicesUpdated = false; // 폰트 목록 업데이트 완료 플래그
+    static _portraitFadeTimers = new WeakMap(); // 포트레잇 페이드 교체 타이머
 
     /** @type {ResizeObserver | null} dx3rd-action-hud와 동일하게 #sidebar 관측 */
     static _stageSidebarRO = null;
@@ -1397,6 +1398,12 @@ export class SpeakerStage {
         // 자신이 보낸 메시지는 무시
         if (!options.skipSenderCheck && data.userId === game.user.id) return;
 
+        const previousActiveActorIds = new Set(this._activeActors.keys());
+        const incomingActors = Array.isArray(data.actors) ? data.actors : [];
+        const incomingActorIds = new Set(incomingActors.map((actorData) => actorData.id));
+        const actorSetChanged = previousActiveActorIds.size !== incomingActorIds.size
+            || [...previousActiveActorIds].some((actorId) => !incomingActorIds.has(actorId));
+
         // 현재 DOM에 있는 액터들을 _previousActorIds로 설정
         const container = $('#lichsoma-stage-overlay .stage-characters-container');
         this._previousActorIds.clear();
@@ -1409,7 +1416,7 @@ export class SpeakerStage {
 
         // 액터 목록 업데이트
         this._activeActors.clear();
-        data.actors.forEach(actorData => {
+        incomingActors.forEach(actorData => {
             const actorImg = actorData.emotionPortrait || actorData.img;
             this._activeActors.set(actorData.id, {
                 img: actorImg,
@@ -1433,7 +1440,12 @@ export class SpeakerStage {
 
         // GM인 경우에만 백스테이지 업데이트
         if (game.user.isGM) {
-            this._renderBackstage($(document));
+            const backstageExists = $(document).find('.lichsoma-speaker-backstage-container').length > 0;
+            if (actorSetChanged || !backstageExists) {
+                this._renderBackstage($(document));
+            } else {
+                this._updateBackstagePortraits({ fade: true });
+            }
         }
 
         if (!game.user.isGM) {
@@ -1612,9 +1624,10 @@ export class SpeakerStage {
                         }
                         
                         // 이미지 업데이트 (감정 변경 시)
-                        const currentImg = existingWrapper.find('.stage-character-portrait img').attr('src');
+                        const portraitImg = existingWrapper.find('.stage-character-portrait img');
+                        const currentImg = portraitImg.attr('src');
                         if (currentImg !== actorData.img) {
-                            existingWrapper.find('.stage-character-portrait img').attr('src', actorData.img);
+                            this._swapImageWithFade(portraitImg, actorData.img);
                         }
                     }
             } else {
@@ -1706,43 +1719,134 @@ export class SpeakerStage {
         return actor.img;
     }
 
+    static _getActorEmotionData(actorId, emotionOverride = null) {
+        const actor = game.actors.get(actorId);
+        if (!actor) return null;
+
+        const savedEmotion = emotionOverride || this.ActorEmotions?.getSavedEmotion?.(actorId) || null;
+        const emotionPortrait = savedEmotion?.emotionPortrait || null;
+
+        return {
+            img: emotionPortrait || actor.img,
+            emotionId: savedEmotion?.emotionId || null,
+            emotionPortrait,
+            emotionUserId: emotionPortrait ? game.user.id : undefined
+        };
+    }
+
+    static _swapImageWithFade(imageTarget, newSrc, options = {}) {
+        if (!newSrc) return;
+
+        const imageElement = imageTarget?.jquery ? imageTarget[0] : imageTarget;
+        if (!imageElement) return;
+
+        const currentSrc = imageElement.getAttribute?.('src') || '';
+        if (currentSrc === newSrc) return;
+
+        const fadeClass = options.fadeClass || 'lichsoma-stage-portrait-fading';
+        const fadeOutMs = Number.isFinite(options.fadeOutMs) ? options.fadeOutMs : 320;
+        const fadeInDelayMs = Number.isFinite(options.fadeInDelayMs) ? options.fadeInDelayMs : 16;
+
+        const previousTimers = this._portraitFadeTimers.get(imageElement);
+        if (previousTimers) {
+            previousTimers.forEach((timerId) => clearTimeout(timerId));
+            this._portraitFadeTimers.delete(imageElement);
+        }
+
+        const finish = () => {
+            imageElement.classList.remove(fadeClass);
+            this._portraitFadeTimers.delete(imageElement);
+        };
+
+        const swap = () => {
+            imageElement.setAttribute('src', newSrc);
+
+            const fadeInTimer = setTimeout(finish, fadeInDelayMs);
+            this._portraitFadeTimers.set(imageElement, [fadeInTimer]);
+        };
+
+        imageElement.classList.add(fadeClass);
+        const swapTimer = setTimeout(swap, fadeOutMs);
+        this._portraitFadeTimers.set(imageElement, [swapTimer]);
+    }
+
+    static _updateStagePortraitElement(actorId, src, { fade = true } = {}) {
+        if (!src) return;
+        const image = document.querySelector(`#lichsoma-stage-overlay .stage-character-wrapper[data-actor-id="${actorId}"] .stage-character-portrait img`);
+        if (!image) return;
+
+        if (fade) this._swapImageWithFade(image, src);
+        else image.setAttribute('src', src);
+    }
+
+    static _updateBackstagePortraitElement(actorId, src, { fade = true } = {}) {
+        if (!src || !game.user?.isGM) return;
+
+        const image = document.querySelector(`.lichsoma-speaker-backstage-container .actor-portrait[data-actor-id="${actorId}"] img`);
+        if (!image) return;
+
+        if (fade) this._swapImageWithFade(image, src);
+        else image.setAttribute('src', src);
+    }
+
+    static _updateActorEmotionOnStage(actorId, options = {}) {
+        if (!actorId) return false;
+
+        const emotionData = this._getActorEmotionData(actorId, options.emotion || null);
+        if (!emotionData?.img) return false;
+
+        const actorData = this._activeActors.get(actorId);
+        let changed = false;
+
+        if (actorData) {
+            changed = actorData.img !== emotionData.img
+                || actorData.emotionId !== emotionData.emotionId
+                || actorData.emotionPortrait !== emotionData.emotionPortrait;
+
+            actorData.img = emotionData.img;
+            actorData.emotionId = emotionData.emotionId;
+            actorData.emotionPortrait = emotionData.emotionPortrait;
+            actorData.emotionUserId = emotionData.emotionUserId;
+        } else {
+            const currentBackstageImg = document.querySelector(`.lichsoma-speaker-backstage-container .actor-portrait[data-actor-id="${actorId}"] img`)?.getAttribute('src') || '';
+            changed = currentBackstageImg !== emotionData.img;
+        }
+
+        this._updateStagePortraitElement(actorId, emotionData.img, { fade: options.fade !== false });
+        this._updateBackstagePortraitElement(actorId, emotionData.img, { fade: options.fade !== false });
+
+        if (changed && options.broadcast !== false && actorData) {
+            this._broadcastStageState();
+        }
+
+        return changed;
+    }
+
     // 스테이지의 모든 액터 이미지 업데이트
     static _updateStageActorImages() {
         const overlay = $('#lichsoma-stage-overlay');
-        if (!overlay.length) return;
+        if (!overlay.length && !game.user?.isGM) return;
 
         let emotionChanged = false;
 
         this._activeActors.forEach((actorData, actorId) => {
-            // 다른 유저가 이미 감정을 설정했으면 건드리지 않음
+            // 다른 유저가 이미 감정을 설정했으면 기존 동작처럼 전체 갱신에서는 건드리지 않음.
+            // 단일 감정 변경 이벤트에서는 _updateActorEmotionOnStage()가 직접 처리한다.
             if (actorData.emotionUserId && actorData.emotionUserId !== game.user.id) {
                 return;
             }
-            
-            // 최신 감정 정보 가져오기 (현재 유저의 감정 설정)
-            const emotion = this.ActorEmotions?.getSavedEmotion(actorId);
-            const newEmotionPortrait = emotion?.emotionPortrait || null;
-            
-            // 감정이 변경되었는지 확인
-            if (actorData.emotionPortrait !== newEmotionPortrait) {
-                emotionChanged = true;
-                
-                // _activeActors의 감정 정보 업데이트
-                actorData.emotionId = emotion?.emotionId || null;
-                actorData.emotionPortrait = newEmotionPortrait;
-                actorData.img = newEmotionPortrait || game.actors.get(actorId)?.img || actorData.img;
-                actorData.emotionUserId = game.user.id;
-            }
-            
-            const wrapper = overlay.find(`[data-actor-id="${actorId}"]`);
-            if (wrapper.length && actorData.img) {
-                wrapper.find('.stage-character-portrait img').attr('src', actorData.img);
-            }
+
+            const changed = this._updateActorEmotionOnStage(actorId, {
+                broadcast: false,
+                fade: true
+            });
+
+            emotionChanged = emotionChanged || changed;
         });
 
         // 백스테이지 포트레잇도 업데이트
         if (game.user.isGM) {
-            this._updateBackstagePortraits();
+            this._updateBackstagePortraits({ fade: true });
         }
 
         // 감정이 변경되었으면 브로드캐스트
@@ -1752,7 +1856,7 @@ export class SpeakerStage {
     }
 
     // 백스테이지 포트레잇 업데이트
-    static _updateBackstagePortraits() {
+    static _updateBackstagePortraits(options = {}) {
         const backstage = $(document).find('.lichsoma-speaker-backstage-container');
         if (!backstage.length) return;
 
@@ -1761,7 +1865,12 @@ export class SpeakerStage {
             if (actorId) {
                 const img = this._getActorImage(actorId);
                 if (img) {
-                    $(element).find('img').attr('src', img);
+                    const image = $(element).find('img');
+                    const currentImg = image.attr('src');
+                    if (currentImg !== img) {
+                        if (options.fade === false) image.attr('src', img);
+                        else this._swapImageWithFade(image, img);
+                    }
                 }
             }
         });
@@ -1769,7 +1878,19 @@ export class SpeakerStage {
 
     // 감정 변경 감지 설정
     static setupEmotionChangeDetection() {
-        // Dialog 닫힘 감지 (감정 선택 다이얼로그)
+        // Speaker Selector의 감정 선택 변경을 즉시 반영
+        document.addEventListener('lichsoma-speaker-selector:emotionChanged', (event) => {
+            const actorId = event.detail?.actorId;
+            if (!actorId) return;
+
+            this._updateActorEmotionOnStage(actorId, {
+                emotion: event.detail?.emotion || null,
+                broadcast: true,
+                fade: true
+            });
+        });
+
+        // Dialog 닫힘 감지 (감정 선택 다이얼로그) — 구버전/이벤트 누락 폴백
         Hooks.on('closeDialog', (dialog) => {
             if (dialog?.data?.title && dialog.data.title.includes('감정')) {
                 setTimeout(() => {
