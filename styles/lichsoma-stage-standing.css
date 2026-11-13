@@ -1,0 +1,245 @@
+/* 포트레잇·스탠딩 공통 스테이지. standing-mode는 기존 CSS 호환용 클래스입니다. */
+#lichsoma-stage-overlay.standing-mode .stage-characters-container {
+    display: block;
+    align-items: unset;
+    justify-content: unset;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-standing-actor-layer {
+    position: absolute;
+    inset: 0 0 0 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 40;
+    isolation: isolate;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing {
+    position: absolute;
+    left: var(--standing-x, 50%);
+    bottom: var(--lss-standing-bottom);
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    height: var(--lss-standing-height);
+    min-height: var(--lss-standing-height);
+    max-height: none;
+    flex: none;
+    display: block;
+    opacity: 1;
+    align-items: flex-start;
+    z-index: var(--standing-z, 5);
+    transform: translateX(-50%);
+    transform-origin: bottom center;
+    transition: opacity 0.28s ease, transform 0.28s ease, left 0.36s ease;
+    will-change: opacity, transform, left;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing.is-inactive-standing {
+    opacity: 0.75;
+    transform: translateX(-50%);
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing.is-active-standing {
+    opacity: 1;
+    transform: translateX(-50%);
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing.preparing {
+    opacity: 0 !important;
+    transform: translateX(calc(-50% + 80px)) !important;
+    max-width: none !important;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing.slide-in-new {
+    animation: lichsomaStageStandingSlideIn 0.42s ease-out;
+}
+
+@keyframes lichsomaStageStandingSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(calc(-50% + 80px));
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%);
+    }
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing .stage-character {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    width: auto;
+    height: 100%;
+    max-height: none;
+    z-index: 1;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing .stage-character-portrait {
+    display: block;
+    max-width: none;
+    max-height: none;
+    height: 100%;
+    filter: var(--lss-standing-shadow);
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing .stage-character-portrait img {
+    display: block;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    height: var(--lss-standing-height);
+    min-height: var(--lss-standing-height);
+    max-height: none;
+    object-fit: contain;
+    object-position: bottom center;
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing.is-portrait-fallback {
+    bottom: calc(var(--lss-standing-bottom) + var(--lss-dialogue-height));
+    height: var(--lss-portrait-size);
+    min-height: 0;
+    max-height: var(--lss-portrait-size);
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing.is-portrait-fallback .stage-character {
+    width: auto;
+    height: var(--lss-portrait-size);
+    max-height: var(--lss-portrait-size);
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing.is-portrait-fallback .stage-character-portrait {
+    display: inline-block;
+    width: auto;
+    height: auto;
+    max-width: var(--lss-portrait-size);
+    max-height: var(--lss-portrait-size);
+    line-height: 0;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing.is-portrait-fallback .stage-character-portrait img {
+    display: block;
+    width: auto;
+    min-width: 0;
+    max-width: var(--lss-portrait-size);
+    height: auto;
+    min-height: 0;
+    max-height: var(--lss-portrait-size);
+    object-fit: contain;
+    object-position: bottom center;
+    -webkit-mask-image: var(--lss-portrait-mask);
+    -webkit-mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-composite: source-in;
+    mask-image: var(--lss-portrait-mask);
+    mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-composite: intersect;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing .character-name {
+    display: none !important;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-character-wrapper.standing .stage-dialogue-box {
+    display: none;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-standing-dialogue-region {
+    position: absolute;
+    left: var(--lss-dialogue-single-inset);
+    right: auto;
+    bottom: var(--lss-standing-bottom);
+    width: calc(100% - 2 * var(--lss-dialogue-single-inset));
+    height: var(--lss-dialogue-height);
+    box-sizing: border-box;
+    display: none;
+    pointer-events: none;
+    z-index: 120;
+    transition: left 0.36s ease, right 0.36s ease, width 0.36s ease, opacity 0.28s ease;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-characters-container.has-gm-standings .stage-standing-dialogue-region-gm,
+#lichsoma-stage-overlay.standing-mode .stage-characters-container.has-player-standings .stage-standing-dialogue-region-player {
+    display: block;
+}
+
+/* 한 진영만 있을 때는 기존처럼 넓은 대화 영역을 사용한다. */
+#lichsoma-stage-overlay.standing-mode .stage-characters-container.has-gm-standings:not(.has-player-standings) .stage-standing-dialogue-region-gm {
+    left: var(--lss-dialogue-single-inset);
+    right: auto;
+    width: calc(100% - 2 * var(--lss-dialogue-single-inset));
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-characters-container.has-player-standings:not(.has-gm-standings) .stage-standing-dialogue-region-player {
+    left: auto;
+    right: var(--lss-dialogue-single-inset);
+    width: calc(100% - 2 * var(--lss-dialogue-single-inset));
+}
+
+/* 양쪽 진영이 모두 있으면 GM은 왼쪽, 플레이어는 오른쪽 대화창을 사용한다. */
+#lichsoma-stage-overlay.standing-mode .stage-characters-container.has-gm-standings.has-player-standings .stage-standing-dialogue-region-gm {
+    left: var(--lss-dialogue-split-inset);
+    right: auto;
+    width: calc((100% - 2 * var(--lss-dialogue-split-inset) - var(--lss-dialogue-split-gap)) / 2);
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-characters-container.has-gm-standings.has-player-standings .stage-standing-dialogue-region-player {
+    left: auto;
+    right: var(--lss-dialogue-split-inset);
+    width: calc((100% - 2 * var(--lss-dialogue-split-inset) - var(--lss-dialogue-split-gap)) / 2);
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-standing-dialogue-box {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: var(--lss-dialogue-height);
+    box-sizing: border-box;
+    padding: var(--lss-dialogue-padding);
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+    border: 2px solid var(--lss-standing-dialogue-border);
+    background: var(--lss-standing-dialogue-bg);
+    pointer-events: auto;
+    overflow: hidden;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-standing-dialogue-name {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--lss-dialogue-height) + var(--lss-name-gap));
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 0;
+    text-align: left;
+    margin: 0;
+    color: var(--lss-standing-name-text);
+    font-family: var(--font-body, sans-serif);
+    font-size: var(--lss-name-size);
+    font-weight: bold;
+    line-height: 1.05;
+    letter-spacing: 0;
+    text-shadow: var(--lss-name-shadow);
+    pointer-events: none;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-standing-dialogue-region-player .stage-standing-dialogue-name {
+    text-align: right;
+}
+
+#lichsoma-stage-overlay.standing-mode .stage-standing-dialogue-box .dialogue-content {
+    flex: 1;
+    min-height: 0;
+}

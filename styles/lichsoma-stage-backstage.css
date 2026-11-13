@@ -1,0 +1,107 @@
+/* 백스테이지 전체 컨테이너 (백스테이지 + 토글 버튼) */
+.lichsoma-speaker-backstage-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 백스테이지 컨테이너 (액터 목록만) */
+.lichsoma-speaker-backstage {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    padding: 0px 4px;
+    background: var(--lss-backstage-bg, var(--color-cool-5-75));
+    border-radius: 4px;
+    min-height: var(--lss-control-size);
+    overflow: hidden;
+}
+
+/* 액터 포트레잇 영역 */
+:where(.lichsoma-speaker-backstage-container) .backstage-actors {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none; /* Firefox */
+}
+
+/* 스크롤바 숨김 (Webkit 브라우저) */
+:where(.lichsoma-speaker-backstage-container) .backstage-actors::-webkit-scrollbar {
+    display: none;
+}
+
+/* 액터 포트레잇 */
+:where(.lichsoma-speaker-backstage-container) .actor-portrait {
+    flex-shrink: 0;
+    width: var(--lss-backstage-portrait-size);
+    height: var(--lss-backstage-portrait-size);
+    border-radius: 4px;
+    overflow: hidden;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+:where(.lichsoma-speaker-backstage-container) .actor-portrait:hover {
+    transform: scale(1.1);
+}
+
+:where(.lichsoma-speaker-backstage-container) .actor-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(100%);
+    transition: opacity 0.36s ease-in-out, filter 0.3s ease;
+}
+
+/* 스테이지에 올라간 액터는 컬러로 표시 + 테마 강조색 하이라이트 */
+:where(.lichsoma-speaker-backstage-container) .actor-portrait.on-stage img {
+    filter: grayscale(0%) drop-shadow(0 0 1px var(--lss-on-stage-accent)) drop-shadow(0 0 2px var(--lss-on-stage-accent));
+}
+
+/* 스테이지에 올라가 있고 현재 선택된 액터는 붉은색 하이라이트 */
+:where(.lichsoma-speaker-backstage-container) .actor-portrait.on-stage.selected-speaker img {
+    filter: grayscale(0%) drop-shadow(0 0 1px var(--lss-selected-accent)) drop-shadow(0 0 2px var(--lss-selected-accent));
+}
+
+/* 액터 없음 메시지 */
+:where(.lichsoma-speaker-backstage-container) .no-actors {
+    color: var(--lss-ui-muted, var(--color-text-dark-secondary));
+    font-size: 12px;
+    font-style: italic;
+    text-align: center;
+    width: 100%;
+    padding: 8px;
+}
+
+/* GM/PL stage controls share dimensions and active icon styling. */
+.lichsoma-speaker-backstage-container .backstage-toggle-btn,
+.lichsoma-speaker-selector .player-actor-toggle-btn,
+.lichsoma-speaker-selector .player-stage-toggle-btn {
+    flex-shrink: 0;
+    width: var(--lss-control-size);
+    height: var(--lss-control-size);
+}
+
+.lichsoma-speaker-backstage-container .backstage-toggle-btn i,
+.lichsoma-speaker-selector .player-actor-toggle-btn i,
+.lichsoma-speaker-selector .player-stage-toggle-btn i {
+    font-size: var(--font-size-16);
+}
+
+.lichsoma-speaker-backstage-container .backstage-toggle-btn[aria-pressed="true"] i,
+.lichsoma-speaker-selector .player-actor-toggle-btn[aria-pressed="true"] i,
+.lichsoma-speaker-selector .player-stage-toggle-btn[aria-pressed="true"] i {
+    color: var(--lss-toggle-active-icon, var(--color-warm-1)) !important;
+}
+
+/* GM이 스테이지 ON + 플레이어는 OFF일 때만 전구 버튼 강조 */
+.lichsoma-speaker-selector .player-stage-toggle-btn.gm-stage-on[aria-pressed="false"] i {
+    color: var(--lss-selected-accent) !important;
+}

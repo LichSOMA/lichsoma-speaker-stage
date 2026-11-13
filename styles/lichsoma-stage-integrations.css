@@ -1,0 +1,46 @@
+/* CAIN Alter HUD integration
+ * 일반/미니 스테이지에서는 CAIN Alter 사냥/하수인 HUD를 스테이지 스피커보다 아래로 내리고
+ * 반투명하게만 처리한다. 버튼과 퀵 액션 상호작용은 유지한다.
+ * 풀 내러티브 모드에서는 CAIN Alter의 HUD 계층을 숨겨 스테이지 연출을 우선한다. */
+#cain-alter-hunt-hud.lichsoma-speaker-stage-hud-fade-managed,
+#cain-alter-hunt-minion-hud.lichsoma-speaker-stage-hud-fade-managed,
+#lichsoma-cain-player-hud.lichsoma-speaker-stage-hud-fade-managed,
+#lichsoma-cain-hud-toggle.lichsoma-speaker-stage-hud-fade-managed {
+    transition: opacity 0.38s ease-in-out, visibility 0s linear 0s !important;
+}
+
+body.lichsoma-speaker-stage-active.lichsoma-speaker-stage-has-speakers:not(.lichsoma-speaker-stage-narrative-full) #cain-alter-hunt-hud.cain-alter-hunt-hud,
+body.lichsoma-speaker-stage-active.lichsoma-speaker-stage-has-speakers:not(.lichsoma-speaker-stage-narrative-full) #cain-alter-hunt-minion-hud.cain-alter-hunt-minion-hud,
+#cain-alter-hunt-hud.lichsoma-speaker-stage-hud-muted,
+#cain-alter-hunt-minion-hud.lichsoma-speaker-stage-hud-muted {
+    opacity: 0.35 !important;
+    pointer-events: auto !important;
+    z-index: 18 !important;
+}
+
+body.lichsoma-speaker-stage-gm.lichsoma-speaker-stage-active.lichsoma-speaker-stage-has-speakers:not(.lichsoma-speaker-stage-narrative-full) #cain-alter-hunt-hud.cain-alter-hunt-hud:hover,
+body.lichsoma-speaker-stage-gm.lichsoma-speaker-stage-active.lichsoma-speaker-stage-has-speakers:not(.lichsoma-speaker-stage-narrative-full) #cain-alter-hunt-minion-hud.cain-alter-hunt-minion-hud:hover,
+body.lichsoma-speaker-stage-gm #cain-alter-hunt-hud.lichsoma-speaker-stage-hud-muted:hover,
+body.lichsoma-speaker-stage-gm #cain-alter-hunt-minion-hud.lichsoma-speaker-stage-hud-muted:hover {
+    opacity: 1 !important;
+    z-index: 140 !important;
+}
+
+body.lichsoma-speaker-stage-active.lichsoma-speaker-stage-has-speakers:not(.lichsoma-speaker-stage-narrative-full) #cain-alter-hunt-minion-hud .cain-alter-hunt-minion-hud-row,
+#cain-alter-hunt-minion-hud.lichsoma-speaker-stage-hud-muted .cain-alter-hunt-minion-hud-row {
+    opacity: 1 !important;
+}
+
+body.lichsoma-speaker-stage-narrative-full #cain-alter-hunt-hud.cain-alter-hunt-hud,
+body.lichsoma-speaker-stage-narrative-full #cain-alter-hunt-minion-hud.cain-alter-hunt-minion-hud,
+body.lichsoma-speaker-stage-narrative-full #lichsoma-cain-player-hud.lichsoma-cain-player-hud,
+body.lichsoma-speaker-stage-narrative-full #lichsoma-cain-hud-toggle.lichsoma-cain-hud-toggle,
+#cain-alter-hunt-hud.lichsoma-speaker-stage-hud-hidden-by-narrative,
+#cain-alter-hunt-minion-hud.lichsoma-speaker-stage-hud-hidden-by-narrative,
+#lichsoma-cain-player-hud.lichsoma-speaker-stage-hud-hidden-by-narrative,
+#lichsoma-cain-hud-toggle.lichsoma-speaker-stage-hud-hidden-by-narrative {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transition: opacity 0.38s ease-in-out, visibility 0s linear 0.38s !important;
+}

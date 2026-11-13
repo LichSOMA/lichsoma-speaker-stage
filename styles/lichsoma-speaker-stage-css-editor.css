@@ -1,0 +1,86 @@
+/* Override core standard-form group geometry within this editor only. */
+.lichsoma-speaker-stage-css-editor .lichsoma-speaker-stage-css-editor-main,
+.lichsoma-speaker-stage-css-editor .lichsoma-speaker-stage-css-editor-actions {
+  display: flex !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+
+.lichsoma-speaker-stage-css-editor .window-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lichsoma-speaker-stage-css-editor .lichsoma-speaker-stage-css-editor-form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  gap: 0;
+  box-sizing: border-box;
+}
+
+.lichsoma-speaker-stage-css-editor .lichsoma-speaker-stage-css-editor-main {
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+}
+
+.lichsoma-speaker-stage-css-editor .lichsoma-speaker-stage-css-editor-main > label {
+  flex: 0 0 auto;
+  width: 100%;
+  margin: 0 0 0.35rem;
+  font-weight: 700;
+}
+
+.lichsoma-speaker-stage-css-editor textarea[name="css"],
+.lichsoma-speaker-stage-css-editor .CodeMirror {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  min-height: var(--lss-code-min-height);
+  box-sizing: border-box;
+  font-family: var(--lss-code-font);
+  font-size: var(--lss-code-size);
+  line-height: 1.35;
+}
+
+.lichsoma-speaker-stage-css-editor textarea[name="css"] {
+  resize: none;
+}
+
+.lichsoma-speaker-stage-css-editor .CodeMirror {
+  height: auto;
+  border: 1px solid var(--color-border-light-2);
+  border-radius: 3px;
+}
+
+.lichsoma-speaker-stage-css-editor .CodeMirror-scroll {
+  min-height: 0;
+}
+
+.lichsoma-speaker-stage-css-editor .lichsoma-speaker-stage-css-editor-actions {
+  flex: 0 0 auto !important;
+  flex-direction: row !important;
+  gap: 0.6rem;
+  margin: 0.6rem 0 0 !important;
+  padding: 0.6rem 0 0 !important;
+  border-top: 1px solid var(--color-border-light-2);
+}
+
+.lichsoma-speaker-stage-css-editor .lichsoma-speaker-stage-css-editor-actions button {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0;
+  margin: 0;
+}

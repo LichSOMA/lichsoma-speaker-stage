@@ -1,0 +1,233 @@
+/* Speaker Selector owns the body theme class. No second setting, hook, or
+ * observer is needed: existing and newly opened stage UI inherit it immediately. */
+body.lichsoma-speaker-theme-dark-simple {
+    --lss-theme-bg: #0b0a13;
+    --lss-theme-surface: #242129;
+    --lss-theme-control: #302b36;
+    --lss-theme-text: #e8e5df;
+    --lss-theme-muted: #aba398;
+    --lss-theme-border: #45424c;
+    --lss-theme-accent: #b59b76;
+    --lss-theme-highlight: #f0e4c8;
+    --lss-theme-hover: #403946;
+    --lss-theme-active: #242129;
+    --lss-theme-on-accent: #0b0a13;
+    --lss-theme-danger: #ff8585;
+    --lss-theme-font: var(--font-body, var(--font-primary, Arial, sans-serif));
+    --lss-theme-scheme: dark;
+    --lss-theme-dialogue: rgba(11, 10, 19, 0.85);
+    --lss-theme-standing-dialogue: rgba(11, 10, 19, 0.78);
+    --lss-theme-backstage: rgba(11, 10, 19, 0.75);
+    --lss-theme-accent-glow: rgba(181, 155, 118, 0.35);
+    --lss-theme-name-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+body.lichsoma-speaker-theme-simple-light {
+    --lss-theme-bg: var(--speaker-light-bg, #cdd1d6);
+    --lss-theme-surface: var(--speaker-light-control, #d9dce1);
+    --lss-theme-control: var(--speaker-light-control, #d9dce1);
+    --lss-theme-text: var(--speaker-light-text, #262a32);
+    --lss-theme-muted: var(--speaker-light-muted, #626b78);
+    --lss-theme-border: var(--speaker-light-border, #929ba8);
+    --lss-theme-accent: #526d8c;
+    --lss-theme-highlight: #344f6f;
+    --lss-theme-hover: var(--speaker-light-hover, #c3c9d2);
+    --lss-theme-active: var(--speaker-light-active, #b5becb);
+    --lss-theme-on-accent: #f4f6f8;
+    --lss-theme-danger: #b42318;
+    --lss-theme-font: var(--font-body, var(--font-primary, Arial, sans-serif));
+    --lss-theme-scheme: light;
+    --lss-theme-dialogue: rgba(217, 220, 225, 0.92);
+    --lss-theme-standing-dialogue: rgba(217, 220, 225, 0.92);
+    --lss-theme-backstage: rgba(217, 220, 225, 0.75);
+    --lss-theme-accent-glow: rgba(82, 109, 140, 0.35);
+    /* Names sit directly over scene art: a light outline keeps dark names legible. */
+    --lss-theme-name-shadow: 0 0 2px #e1e4e8, 0 0 5px #e1e4e8;
+}
+body.lichsoma-speaker-theme-retro-terminal {
+    --lss-theme-bg: var(--speaker-terminal-bg, #050908);
+    --lss-theme-surface: #0d1b15;
+    --lss-theme-control: #0d1b15;
+    --lss-theme-text: var(--speaker-terminal-fg, #8fffc7);
+    --lss-theme-muted: var(--speaker-terminal-muted, #6cb99a);
+    --lss-theme-border: var(--speaker-terminal-border, rgba(143, 255, 199, 0.3));
+    --lss-theme-accent: var(--speaker-terminal-fg, #8fffc7);
+    --lss-theme-highlight: var(--speaker-terminal-highlight, #baffdd);
+    --lss-theme-hover: var(--speaker-terminal-control-hover, #244b3a);
+    --lss-theme-active: var(--speaker-terminal-control-active, #17382b);
+    --lss-theme-on-accent: var(--speaker-terminal-bg, #050908);
+    --lss-theme-danger: #ff8585;
+    --lss-theme-font: var(--speaker-terminal-font, ui-monospace, Consolas, monospace);
+    --lss-theme-scheme: dark;
+    --lss-theme-dialogue: rgba(5, 9, 8, 0.85);
+    --lss-theme-standing-dialogue: rgba(5, 9, 8, 0.85);
+    --lss-theme-backstage: var(--speaker-terminal-control-bg, rgba(5, 9, 8, 0.75));
+    --lss-theme-accent-glow: rgba(143, 255, 199, 0.3);
+    --lss-theme-name-shadow: 0 0 5px rgba(143, 255, 199, 0.3), 2px 2px 4px #050908;
+}
+body.lichsoma-speaker-theme-terminal-red {
+    --lss-theme-bg: var(--speaker-terminal-bg, #0b0505);
+    --lss-theme-surface: #210e0e;
+    --lss-theme-control: #210e0e;
+    --lss-theme-text: var(--speaker-terminal-fg, #ff9b9b);
+    --lss-theme-muted: var(--speaker-terminal-muted, #c57878);
+    --lss-theme-border: var(--speaker-terminal-border, rgba(255, 155, 155, 0.3));
+    --lss-theme-accent: var(--speaker-terminal-fg, #ff9b9b);
+    --lss-theme-highlight: var(--speaker-terminal-highlight, #ffd0d0);
+    --lss-theme-hover: var(--speaker-terminal-control-hover, #512525);
+    --lss-theme-active: var(--speaker-terminal-control-active, #3b1919);
+    --lss-theme-on-accent: var(--speaker-terminal-bg, #0b0505);
+    --lss-theme-danger: #ff8585;
+    --lss-theme-font: var(--speaker-terminal-font, ui-monospace, Consolas, monospace);
+    --lss-theme-scheme: dark;
+    --lss-theme-dialogue: rgba(11, 5, 5, 0.85);
+    --lss-theme-standing-dialogue: rgba(11, 5, 5, 0.85);
+    --lss-theme-backstage: var(--speaker-terminal-control-bg, rgba(11, 5, 5, 0.75));
+    --lss-theme-accent-glow: rgba(255, 155, 155, 0.3);
+    --lss-theme-name-shadow: 0 0 5px rgba(255, 155, 155, 0.3), 2px 2px 4px #0b0505;
+}
+
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+:where(#lichsoma-stage-overlay, .lichsoma-speaker-backstage-container,
+    .lichsoma-speaker-selector .player-actor-toggle-btn, .lichsoma-speaker-selector .player-stage-toggle-btn,
+    .window-header .lichsoma-standing-manage-btn:not(:where(.sheet, .sheet *)), .lichsoma-standing-manager-app,
+    .lichsoma-stage-background-setting-app, .lichsoma-speaker-stage-css-editor) {
+    --lss-dialogue-bg: var(--lss-theme-dialogue);
+    --lss-standing-dialogue-bg: var(--lss-theme-standing-dialogue);
+    --lss-dialogue-text: var(--lss-theme-text);
+    --lss-dialogue-emphasis: var(--lss-theme-highlight);
+    --lss-dialogue-border: var(--lss-theme-border);
+    --lss-standing-dialogue-border: var(--lss-theme-border);
+    --lss-standing-name-text: var(--lss-theme-highlight);
+    --lss-name-shadow: var(--lss-theme-name-shadow);
+    --lss-on-stage-accent: var(--lss-theme-accent);
+    --lss-backstage-bg: var(--lss-theme-backstage);
+    --lss-toggle-active-icon: var(--lss-theme-highlight);
+    --lss-sheet-header-text: var(--lss-theme-text);
+    --lss-sheet-header-glow-strong: var(--lss-theme-accent-glow);
+    --lss-sheet-header-glow-soft: var(--lss-theme-accent-glow);
+    --lss-scrollbar-track: transparent;
+    --lss-scrollbar-thumb: var(--lss-theme-border);
+    --lss-scrollbar-hover: var(--lss-theme-muted);
+    --lss-ui-bg: var(--lss-theme-bg);
+    --lss-ui-surface: var(--lss-theme-surface);
+    --lss-ui-input-bg: var(--lss-theme-control);
+    --lss-ui-text: var(--lss-theme-text);
+    --lss-ui-muted: var(--lss-theme-muted);
+    --lss-ui-border: var(--lss-theme-border);
+    --lss-ui-accent: var(--lss-theme-accent);
+    --lss-ui-accent-hover: var(--lss-theme-highlight);
+    --lss-ui-hover-bg: var(--lss-theme-hover);
+    --lss-background-accent: var(--lss-theme-accent);
+    --lss-background-danger: var(--lss-theme-danger);
+    --lss-background-drag-glow: var(--lss-theme-accent-glow);
+    --lss-background-active-glow: var(--lss-theme-accent-glow);
+    --lss-background-control-bg: var(--lss-theme-backstage);
+    --lss-background-control-hover-bg: var(--lss-theme-hover);
+    --lss-background-control-text: var(--lss-theme-text);
+    --lss-background-delete-bg: var(--lss-theme-control);
+    --lss-background-image-text: #fff;
+    --color-text-primary: var(--lss-theme-text);
+    --color-text-secondary: var(--lss-theme-muted);
+    --color-text-emphatic: var(--lss-theme-highlight);
+    --color-scrollbar: var(--lss-theme-muted);
+    --input-background-color: var(--lss-theme-control);
+    --input-text-color: var(--lss-theme-text);
+    --input-border-color: var(--lss-theme-border);
+    --input-focus-outline-color: var(--lss-theme-accent);
+    --button-background-color: var(--lss-theme-control);
+    --button-text-color: var(--lss-theme-text);
+    --button-border-color: var(--lss-theme-border);
+    --button-hover-background-color: var(--lss-theme-hover);
+    --button-hover-text-color: var(--lss-theme-highlight);
+    --button-focus-outline-color: var(--lss-theme-accent);
+    --control-bg-color: var(--lss-theme-backstage);
+    --control-icon-color: var(--lss-theme-text);
+    --control-border-color: var(--lss-theme-border);
+    --control-hover-bg-color: var(--lss-theme-hover);
+    --control-hover-icon-color: var(--lss-theme-highlight);
+    --control-hover-border-color: var(--lss-theme-accent);
+    --control-active-bg-color: var(--lss-theme-active);
+    --control-active-icon-color: var(--lss-theme-highlight);
+    --control-active-border-color: var(--lss-theme-accent);
+    --font-body: var(--lss-theme-font);
+    color-scheme: var(--lss-theme-scheme);
+}
+
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+:is(.lichsoma-speaker-backstage-container .backstage-toggle-btn,
+    .lichsoma-speaker-selector .player-actor-toggle-btn, .lichsoma-speaker-selector .player-stage-toggle-btn) {
+    background: var(--lss-theme-backstage);
+    color: var(--lss-theme-text);
+    border-color: var(--lss-theme-border);
+}
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+:is(.lichsoma-speaker-backstage-container .backstage-toggle-btn,
+    .lichsoma-speaker-selector .player-actor-toggle-btn, .lichsoma-speaker-selector .player-stage-toggle-btn):is(:hover, :focus-visible) {
+    background: var(--lss-theme-hover);
+    color: var(--lss-theme-highlight);
+    border-color: var(--lss-theme-accent);
+}
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+:is(.lichsoma-speaker-backstage-container .backstage-toggle-btn,
+    .lichsoma-speaker-selector .player-actor-toggle-btn, .lichsoma-speaker-selector .player-stage-toggle-btn)[aria-pressed="true"] {
+    background: var(--lss-theme-active);
+    color: var(--lss-theme-highlight);
+    border-color: var(--lss-theme-accent);
+}
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+#lichsoma-stage-overlay .lichsoma-stage-bg-scene-select {
+    background: var(--lss-background-control-bg);
+    color: var(--lss-background-control-text);
+    border-color: var(--lss-ui-border);
+    font-family: var(--lss-theme-font);
+}
+
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+:is(#lichsoma-stage-overlay .character-name, #lichsoma-stage-overlay .stage-standing-dialogue-name) {
+    color: var(--lss-standing-name-text);
+}
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+:is(.lichsoma-standing-manager-app, .lichsoma-stage-background-setting-app, .lichsoma-speaker-stage-css-editor) {
+    background: var(--lss-ui-bg);
+    color: var(--lss-ui-text);
+    font-family: var(--lss-theme-font);
+    border-color: var(--lss-ui-border);
+}
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+:is(.lichsoma-standing-manager-app, .lichsoma-stage-background-setting-app, .lichsoma-speaker-stage-css-editor)
+:is(.window-header, .window-content) {
+    background: var(--lss-ui-bg);
+    color: var(--lss-ui-text);
+    border-color: var(--lss-ui-border);
+}
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+:is(.application.lichsoma-standing-manager-app, .application.lichsoma-stage-background-setting-app, .application.lichsoma-speaker-stage-css-editor)
+.window-content :is(input, select, textarea, button):not(.icon, [class*="fa-"], .fas, .far, .fab, textarea[name="css"]) {
+    font-family: var(--lss-theme-font);
+}
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+:is(.application.lichsoma-standing-manager-app, .application.lichsoma-stage-background-setting-app, .application.lichsoma-speaker-stage-css-editor)
+.window-content :is(input, select, textarea) {
+    background: var(--lss-ui-input-bg);
+    color: var(--lss-ui-text);
+    border-color: var(--lss-ui-border);
+}
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+.application.lichsoma-standing-manager-app .window-content .lichsoma-standing-manager-actions button.lichsoma-standing-save-action {
+    color: var(--lss-theme-on-accent);
+}
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+.lichsoma-speaker-stage-css-editor :is(textarea[name="css"], .CodeMirror, .CodeMirror-gutters) {
+    background: var(--lss-ui-input-bg);
+    color: var(--lss-ui-text);
+    border-color: var(--lss-ui-border);
+    font-family: var(--lss-code-font);
+}
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+.lichsoma-speaker-stage-css-editor .CodeMirror-linenumber {
+    color: var(--lss-ui-muted);
+}
+body:is(.lichsoma-speaker-theme-dark-simple, .lichsoma-speaker-theme-simple-light, .lichsoma-speaker-theme-retro-terminal, .lichsoma-speaker-theme-terminal-red)
+.lichsoma-speaker-stage-css-editor .CodeMirror-cursor {
+    border-left-color: var(--lss-ui-text);
+}

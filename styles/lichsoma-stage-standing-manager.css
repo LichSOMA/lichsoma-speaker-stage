@@ -1,0 +1,217 @@
+/* 액터 시트 헤더 스탠딩 관리 버튼 */
+.window-header .lichsoma-standing-manage-btn {
+    width: auto;
+    max-width: max-content;
+    min-width: unset;
+    white-space: nowrap;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+.window-header .lichsoma-standing-manage-btn--legacy-sheet {
+    padding: 0;
+    margin-left: 8px;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    color: var(--lss-sheet-header-text) !important;
+}
+
+.window-header .lichsoma-standing-manage-btn--legacy-sheet i,
+.window-header .lichsoma-standing-manage-btn--legacy-sheet .lichsoma-standing-manage-label {
+    color: var(--lss-sheet-header-text) !important;
+}
+
+.window-header .lichsoma-standing-manage-btn--legacy-sheet:hover,
+.window-header .lichsoma-standing-manage-btn--legacy-sheet:focus-visible {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    color: var(--lss-sheet-header-text) !important;
+}
+
+.window-header .lichsoma-standing-manage-btn--legacy-sheet:hover i,
+.window-header .lichsoma-standing-manage-btn--legacy-sheet:hover .lichsoma-standing-manage-label,
+.window-header .lichsoma-standing-manage-btn--legacy-sheet:focus-visible i,
+.window-header .lichsoma-standing-manage-btn--legacy-sheet:focus-visible .lichsoma-standing-manage-label {
+    color: var(--lss-sheet-header-text) !important;
+    text-shadow:
+        0 0 8px var(--lss-sheet-header-glow-strong),
+        0 0 16px var(--lss-sheet-header-glow-soft);
+}
+
+/* 스탠딩 관리 창 */
+.application.lichsoma-standing-manager-app {
+    min-width: 520px;
+    min-height: 400px;
+}
+
+.application.lichsoma-standing-manager-app .window-content.lichsoma-standing-manager-window-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    padding: 16px;
+}
+
+.application.lichsoma-standing-manager-app .lichsoma-standing-manager-app-inner {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    gap: 12px;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-container h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-hint {
+    margin: 0 0 8px;
+    color: var(--lss-ui-muted, var(--color-text-secondary, #aaa));
+    font-size: 12px;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-emotion-section {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-empty {
+    text-align: center;
+    color: var(--lss-ui-muted, var(--color-text-secondary, #aaa));
+    padding: 24px 0;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border: 1px solid var(--lss-ui-border, var(--color-border-light-primary, #555));
+    border-radius: 6px;
+    background: var(--lss-ui-surface, var(--color-bg-tint, #2a2a2a));
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-item img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    border-radius: 4px;
+    border: 1px solid var(--lss-ui-border, var(--color-border-light-primary, #555));
+    background: rgba(0, 0, 0, 0.2);
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-item-info label {
+    color: var(--lss-ui-text, var(--color-text-primary, #fff));
+    font-weight: bold;
+    font-size: 13px;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-item-info input {
+    width: 100%;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid var(--lss-ui-border, var(--color-border-light-primary, #555));
+    background: var(--lss-ui-input-bg, var(--color-bg, #1a1a1a));
+    color: var(--lss-ui-text, var(--color-text-primary, #fff));
+    font-size: 13px;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-item-info input:focus {
+    outline: none;
+    border-color: var(--lss-ui-accent, var(--color-primary, #4a90e2));
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-item-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-item-actions button {
+    width: var(--lss-control-size);
+    height: var(--lss-control-size);
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--lss-ui-text, var(--color-text-primary, #fff));
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-item-actions button:hover {
+    background: var(--lss-ui-hover-bg, var(--color-bg-hover, rgba(255, 255, 255, 0.15)));
+    color: var(--lss-ui-accent, var(--color-primary, #4a90e2));
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--lss-ui-border, var(--color-border-light-primary, #666));
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-manager-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border-radius: 4px;
+    border: 1px solid var(--lss-ui-border, var(--color-border-light-primary, #666));
+    background: transparent;
+    color: var(--lss-ui-text, var(--color-text-primary, #fff));
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-save-action {
+    background: var(--lss-ui-accent, var(--color-primary, #4a90e2)) !important;
+    border-color: var(--lss-ui-accent, var(--color-primary, #4a90e2)) !important;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-save-action:hover {
+    background: var(--lss-ui-accent-hover, var(--color-primary-light, #5aa0f2)) !important;
+    border-color: var(--lss-ui-accent-hover, var(--color-primary-light, #5aa0f2)) !important;
+}
+
+:where(.lichsoma-standing-manager-app) .lichsoma-standing-cancel-action:hover {
+    border-color: var(--lss-ui-accent, var(--color-primary, #4a90e2));
+    color: var(--lss-ui-accent, var(--color-primary, #4a90e2));
+}

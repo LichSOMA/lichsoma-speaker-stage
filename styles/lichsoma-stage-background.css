@@ -5,7 +5,7 @@
 
 /* 하단 대화·입력 줄 높이 — 이 영역만큼 빼고 16:9 프레임을 세로 중앙 배치 */
 #lichsoma-stage-overlay {
-    --stage-bg-dialogue-strip: 200px;
+    --stage-bg-dialogue-strip: calc(var(--lss-dialogue-height) + var(--lss-standing-bottom));
     --stage-bg-left-margin: 104px;
     --stage-bg-right-gap: 16px;
 }
@@ -32,6 +32,47 @@
     z-index: 5;
 }
 
+/* 풀 모드: Foundry #interface 높이(작업표시줄 모듈이 줄이는 영역)에 묶이지 않고
+ * 브라우저 화면 전체를 기준으로 16:9 배경을 계산한다.
+ * 미니 모드는 기존 위치/폭 계산을 유지한다. */
+#lichsoma-stage-overlay .lichsoma-stage-background-shell:not(.lichsoma-stage-background-shell--mini) {
+    position: fixed;
+    left: 0;
+    top: 0;
+    right: auto;
+    bottom: auto;
+    width: 100vw;
+    max-width: none;
+    height: 100vh;
+    max-height: none;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+    background: transparent;
+}
+
+/* 풀 모드 검은 배경은 전체 셸을 덮지 않고, 실제 16:9 프레임 밖의 레터박스 영역에만 올린다.
+ * 배경 이미지는 PIXI 캔버스에 그려지므로 셸 전체에 background:#000을 주면 이미지가 가려져 검은 화면만 보인다. */
+#lichsoma-stage-overlay .lichsoma-stage-background-shell:not(.lichsoma-stage-background-shell--mini)::before,
+#lichsoma-stage-overlay .lichsoma-stage-background-shell:not(.lichsoma-stage-background-shell--mini)::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 100vw;
+    height: max(0px, calc((100vh - 56.25vw) / 2));
+    background: transparent;
+    pointer-events: none;
+    z-index: 0;
+}
+
+#lichsoma-stage-overlay .lichsoma-stage-background-shell:not(.lichsoma-stage-background-shell--mini)::before {
+    top: 0;
+}
+
+#lichsoma-stage-overlay .lichsoma-stage-background-shell:not(.lichsoma-stage-background-shell--mini)::after {
+    bottom: 0;
+}
+
 /* 풀 모드 내러티브: 포인터 바닥(.lichsoma-stage-bg-narrative-full-blocker)보다 셸·프레임 바 전체가 위로 */
 #lichsoma-stage-overlay .lichsoma-stage-background-shell--above-narrative-pointer-floor.lichsoma-stage-background-shell--overlay-ui {
     z-index: 12;
@@ -51,6 +92,9 @@
 }
 
 #lichsoma-stage-overlay.lichsoma-stage-overlay--narrative-full-pointer-block > .lichsoma-stage-bg-narrative-full-blocker {
+    left: 0;
+    width: 100%;
+    max-width: none;
     pointer-events: auto;
 }
 
@@ -74,18 +118,28 @@
     box-sizing: border-box;
 }
 
+/* 풀 모드: 좌우 폭은 항상 실제 화면 100vw에 맞추고, 16:9 높이를 세로 중앙에 둔다.
+ * 화면보다 낮으면 위아래는 검은 레터박스가 남고, 화면보다 높으면 위아래가 같은 비율로 잘린다. */
+#lichsoma-stage-overlay .lichsoma-stage-background-shell:not(.lichsoma-stage-background-shell--mini) .lichsoma-stage-background-shell-inner {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
 #lichsoma-stage-overlay .lichsoma-stage-background-shell--mini .lichsoma-stage-background-frame {
-    width: min(480px, 100cqw, calc(100cqh * 16 / 9));
-    max-width: min(480px, 100cqw);
+    width: min(var(--lss-background-mini-width), 100cqw, calc(100cqh * 16 / 9));
+    max-width: min(var(--lss-background-mini-width), 100cqw);
     height: auto;
     aspect-ratio: 16 / 9;
-    max-height: min(270px, 100cqh);
+    max-height: min(calc(var(--lss-background-mini-width) * 9 / 16), 100cqh);
     flex-shrink: 0;
 }
 
 /*
- * 폭만 100%로 두면 aspect-ratio 높이가 padding-bottom/top 안쪽을 넘김.
- * min(가용폭, 가용높이×16/9) 로 폭을 제한하면 높이는 자동으로 가용 높이 이하로 유지됨.
+ * 기본 프레임은 가용 영역 안에 들어가는 16:9 박스다.
+ * 풀 모드에서는 아래의 별도 규칙으로 화면 좌우 폭을 우선한다.
  */
 #lichsoma-stage-overlay .lichsoma-stage-background-frame {
     position: relative;
@@ -103,9 +157,28 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
+#lichsoma-stage-overlay .lichsoma-stage-background-shell:not(.lichsoma-stage-background-shell--mini) .lichsoma-stage-background-frame {
+    position: absolute;
+    left: 0;
+    top: calc((100vh - 56.25vw) / 2);
+    width: 100vw;
+    height: 56.25vw;
+    max-width: none;
+    max-height: none;
+    flex-shrink: 0;
+    transform: none;
+    border-radius: 0;
+}
+
 #lichsoma-stage-overlay .lichsoma-stage-background-frame--overlay-ui {
     box-shadow: none;
     background: transparent;
+}
+
+/* 실제 배경 이미지는 PIXI 레이어에 그려지고, 이 프레임은 측정/컨트롤용이다.
+ * 검은 레터박스는 DOM 오버레이가 아니라 PIXI blackout 레이어에서 그린다. */
+#lichsoma-stage-overlay.lichsoma-stage-overlay--stage-bg-backdrop .lichsoma-stage-background-shell:not(.lichsoma-stage-background-shell--mini) .lichsoma-stage-background-frame--overlay-ui {
+    box-shadow: none;
 }
 
 /* 내러티브 + 미니 모드: 프레임 영역만 맵으로 포인터 차단(풀 모드는 위 전역 블로커 사용). 씬 바는 z-index로 위 */
@@ -120,31 +193,51 @@
     pointer-events: auto;
 }
 
-/* 16:9 프레임 안 우측 상단 — 미니 토글·셀렉트(GM만 슬롯 변경) */
-#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-scene-bar {
+/* 미니 토글·셀렉트(GM만 슬롯 변경).
+ * 위치는 배경 프레임이 아니라 “미니 모드에서 원래 놓이는 좌표”를 기준으로 고정한다.
+ * 미니 모드 기준 좌표: shell padding-top 16px + frame 내부 top 8px = 24px,
+ * shell 오른쪽 padding 16px + frame 내부 right 8px = 24px. */
+#lichsoma-stage-overlay .lichsoma-stage-background-shell > .lichsoma-stage-bg-scene-bar {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    z-index: 2;
+    top: var(--lss-background-control-inset);
+    right: var(--lss-background-control-inset);
+    z-index: 3;
     display: flex;
     flex-direction: row;
     align-items: center;
     gap: 8px;
     pointer-events: auto;
     padding: 8px;
-    max-width: calc(100% - 16px);
+    max-width: min(var(--lss-background-controls-width), calc(100% - 2 * var(--lss-background-control-inset)));
+    opacity: 0;
+    transition: opacity 0.48s ease-in-out;
 }
 
-#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-mini-toggle {
+#lichsoma-stage-overlay.lichsoma-stage-overlay--stage-controls-visible .lichsoma-stage-background-shell > .lichsoma-stage-bg-scene-bar {
+    opacity: 1;
+}
+
+#lichsoma-stage-overlay:not(.lichsoma-stage-overlay--stage-controls-visible) .lichsoma-stage-background-shell > .lichsoma-stage-bg-scene-bar {
+    pointer-events: none;
+}
+
+/* 풀 모드에서는 배경 프레임이 화면 전체 폭을 쓰므로, 컨트롤만 미니 모드의 실제 화면 좌표로 보정한다.
+ * 결과적으로 풀/미니 모두 같은 위치: 우측 사이드바 + right gap + 24px 만큼 떨어진 지점. */
+#lichsoma-stage-overlay .lichsoma-stage-background-shell:not(.lichsoma-stage-background-shell--mini) > .lichsoma-stage-bg-scene-bar {
+    right: calc(var(--sidebar-width, 300px) + var(--stage-bg-right-gap, 16px) + var(--lss-background-control-inset));
+    max-width: min(var(--lss-background-controls-width), calc(100vw - var(--sidebar-width, 300px) - var(--stage-bg-left-margin, 104px) - var(--stage-bg-right-gap, 16px) - 2 * var(--lss-background-control-inset)));
+}
+
+#lichsoma-stage-overlay .lichsoma-stage-bg-mini-toggle {
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
+    width: var(--lss-background-control-size);
+    height: var(--lss-background-control-size);
     padding: 0;
     margin: 0;
-    border: 1px solid var(--color-text-light-highlight, #f0f0f0);
+    border: 1px solid var(--lss-background-control-text, var(--color-text-light-highlight, #f0f0f0));
     border-radius: 4px;
-    background: rgba(0, 0, 0, 0.55);
-    color: var(--color-text-light-highlight, #f0f0f0);
+    background: var(--lss-background-control-bg);
+    color: var(--lss-background-control-text, var(--color-text-light-highlight, #f0f0f0));
     opacity: 0.25;
     cursor: pointer;
     display: inline-flex;
@@ -155,14 +248,14 @@
     box-sizing: border-box;
 }
 
-#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-mini-toggle:hover {
+#lichsoma-stage-overlay .lichsoma-stage-bg-mini-toggle:hover {
     opacity: 1;
-    border-color: #ffbb00;
-    color: #ffbb00;
-    background: rgba(0, 0, 0, 0.75);
+    border-color: var(--lss-background-accent);
+    color: var(--lss-background-accent);
+    background: var(--lss-background-control-hover-bg);
 }
 
-#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-scene-select {
+#lichsoma-stage-overlay .lichsoma-stage-bg-scene-select {
     width: auto;
     min-width: 120px;
     max-width: min(240px, 42vw);
@@ -172,20 +265,20 @@
 }
 
 /* GM만 표시 — 호버 전 투명도 0.5 (플레이어는 스크립트로 숨김) */
-#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-scene-select:not(.lichsoma-stage-bg-scene-select--players-hidden) {
+#lichsoma-stage-overlay .lichsoma-stage-bg-scene-select:not(.lichsoma-stage-bg-scene-select--players-hidden) {
     opacity: 0.5;
     transition: opacity 0.15s ease;
 }
 
-#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-scene-select:not(.lichsoma-stage-bg-scene-select--players-hidden):hover {
+#lichsoma-stage-overlay .lichsoma-stage-bg-scene-select:not(.lichsoma-stage-bg-scene-select--players-hidden):hover {
     opacity: 1;
 }
 
-.lichsoma-stage-bg-scene-select--players-hidden {
+:where(#lichsoma-stage-overlay) .lichsoma-stage-bg-scene-select--players-hidden {
     display: none !important;
 }
 
-#lichsoma-stage-overlay .lichsoma-stage-background-frame .lichsoma-stage-bg-scene-select:disabled {
+#lichsoma-stage-overlay .lichsoma-stage-bg-scene-select:disabled {
     cursor: default;
 }
 
@@ -204,7 +297,7 @@
     padding: 12px 16px;
 }
 
-.lichsoma-stage-bg-app-inner {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-app-inner {
     flex: 1;
     min-height: 0;
     display: flex;
@@ -212,7 +305,7 @@
     gap: 12px;
 }
 
-.lichsoma-stage-bg-setting-toolbar {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-setting-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -220,76 +313,76 @@
     flex-shrink: 0;
 }
 
-.lichsoma-stage-bg-setting-toolbar label {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-setting-toolbar label {
     font-weight: 600;
 }
 
-.lichsoma-stage-bg-setting-toolbar select {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-setting-toolbar select {
     min-width: 220px;
     max-width: 100%;
 }
 
-.lichsoma-stage-bg-setting-scroll {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-setting-scroll {
     flex: 1;
     min-height: 0;
     overflow: auto;
     padding: 4px;
-    border: 1px solid var(--color-border-light-primary, #444);
+    border: 1px solid var(--lss-ui-border, var(--color-border-light-primary, #444));
     border-radius: 6px;
-    background: var(--color-cool-5, #1a1a1a);
+    background: var(--lss-ui-bg, var(--color-cool-5, #1a1a1a));
 }
 
-.lichsoma-stage-bg-grid {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
 }
 
-.lichsoma-stage-bg-slot {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot {
     position: relative;
     aspect-ratio: 16 / 9;
-    border: 2px dashed var(--color-border-light-primary, #666);
+    border: 2px dashed var(--lss-ui-border, var(--color-border-light-primary, #666));
     border-radius: 6px;
-    background: var(--color-bg-tint, #222);
+    background: var(--lss-ui-surface, var(--color-bg-tint, #222));
     cursor: grab;
     overflow: hidden;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.lichsoma-stage-bg-slot:active {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot:active {
     cursor: grabbing;
 }
 
-.lichsoma-stage-bg-slot--dragging {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot--dragging {
     opacity: 0.55;
 }
 
-.lichsoma-stage-bg-slot--drag-over {
-    border-color: #ffbb00;
-    box-shadow: inset 0 0 0 2px rgba(255, 187, 0, 0.45);
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot--drag-over {
+    border-color: var(--lss-background-accent);
+    box-shadow: inset 0 0 0 2px var(--lss-background-drag-glow);
 }
 
-.lichsoma-stage-bg-slot:hover {
-    border-color: #ffbb00;
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot:hover {
+    border-color: var(--lss-background-accent);
 }
 
 /* 선택된 슬롯(배경 목록에서 활성) — 점선 테두리 색 */
-.lichsoma-stage-bg-slot.is-active-slot {
-    border-color: #ffbb00;
-    box-shadow: 0 0 0 2px rgba(255, 187, 0, 0.35);
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot.is-active-slot {
+    border-color: var(--lss-background-accent);
+    box-shadow: 0 0 0 2px var(--lss-background-active-glow);
 }
 
 /* 빈 슬롯(단일 모드): 이미지 추가 영역 호버 시 점선 테두리 */
-.lichsoma-stage-bg-slot:has(> .lichsoma-stage-bg-slot-placeholder):hover {
-    border-color: #ffbb00;
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot:has(> .lichsoma-stage-bg-slot-placeholder):hover {
+    border-color: var(--lss-background-accent);
 }
 
 /* 시간대 연동: 빈 칸(+) 위 호버 시 슬롯 점선 테두리 */
-.lichsoma-stage-bg-slot--time-variant:has(.lichsoma-stage-bg-time-placeholder-inner:hover) {
-    border-color: #ffbb00;
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot--time-variant:has(.lichsoma-stage-bg-time-placeholder-inner:hover) {
+    border-color: var(--lss-background-accent);
 }
 
-.lichsoma-stage-bg-slot-preview {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot-preview {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -297,7 +390,7 @@
     display: block;
 }
 
-.lichsoma-stage-bg-slot-placeholder {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot-placeholder {
     position: absolute;
     inset: 0;
     display: flex;
@@ -305,14 +398,14 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    color: var(--color-text-dark-secondary, #888);
+    color: var(--lss-ui-muted, var(--color-text-dark-secondary, #888));
     font-size: 12px;
     text-align: center;
     padding: 8px;
     pointer-events: none;
 }
 
-.lichsoma-stage-bg-slot-clear {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot-clear {
     position: absolute;
     top: 4px;
     right: 4px;
@@ -323,7 +416,7 @@
     border: none;
     border-radius: 50%;
     background: none;
-    color: #fff;
+    color: var(--lss-background-image-text);
     cursor: pointer;
     z-index: 2;
     display: flex;
@@ -333,18 +426,18 @@
     transition: opacity 0.15s ease;
 }
 
-.lichsoma-stage-bg-slot:hover .lichsoma-stage-bg-slot-clear {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot:hover .lichsoma-stage-bg-slot-clear {
     opacity: 1;
 }
 
-.lichsoma-stage-bg-slot-clear:hover {
-    border: 2px dashed #dc3545;
-    background: rgb(255, 255, 255, 0.5);
-    color: #dc3545;
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot-clear:hover {
+    border: 2px dashed var(--lss-background-danger);
+    background: var(--lss-background-delete-bg);
+    color: var(--lss-background-danger);
 }
 
 /* 슬롯 표시 이름 (미리보기 하단 오버레이) */
-.lichsoma-stage-bg-slot-name-row {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot-name-row {
     position: absolute;
     left: 0;
     right: 0;
@@ -356,26 +449,26 @@
     box-sizing: border-box;
 }
 
-.lichsoma-stage-bg-slot-name {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot-name {
     width: 100%;
     box-sizing: border-box;
     height: 26px;
     padding: 2px 8px;
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 4px;
-    background: rgba(0, 0, 0, 0.55);
-    color: var(--color-text-light-highlight, #f0f0f0);
+    background: var(--lss-background-control-bg);
+    color: var(--lss-background-control-text, var(--color-text-light-highlight, #f0f0f0));
     font-size: 12px;
 }
 
-.lichsoma-stage-bg-slot-name:focus {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot-name:focus {
     outline: none;
-    border-color: #ffbb00;
-    background: rgba(0, 0, 0, 0.75);
+    border-color: var(--lss-background-accent);
+    background: var(--lss-background-control-hover-bg);
 }
 
 /* 시간대 연동: 미리보기(추가·삭제 제외) 드래그로 순서 변경, 이름은 하단 오버레이 */
-.lichsoma-stage-bg-slot--time-variant {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot--time-variant {
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -384,16 +477,16 @@
     box-sizing: border-box;
 }
 
-.lichsoma-stage-bg-slot--time-variant:active {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot--time-variant:active {
     cursor: grabbing;
 }
 
-.lichsoma-stage-bg-slot--time-variant .lichsoma-stage-bg-slot-name-row {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot--time-variant .lichsoma-stage-bg-slot-name-row {
     cursor: text;
 }
 
 /* 16:9 미리보기 박스 — 이름 줄이 이 영역 하단에 겹침 */
-.lichsoma-stage-bg-slot-time-stack {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot-time-stack {
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
@@ -402,7 +495,7 @@
     overflow: hidden;
 }
 
-.lichsoma-stage-bg-slot--time-variant .lichsoma-stage-bg-slot-time-strip {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-slot--time-variant .lichsoma-stage-bg-slot-time-strip {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -412,7 +505,7 @@
     align-items: stretch;
 }
 
-.lichsoma-stage-bg-time-cell {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-cell {
     flex: 1;
     min-width: 0;
     position: relative;
@@ -422,11 +515,11 @@
     align-items: stretch;
 }
 
-.lichsoma-stage-bg-time-cell:last-child {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-cell:last-child {
     border-right: none;
 }
 
-.lichsoma-stage-bg-time-label {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-label {
     position: absolute;
     top: 4px;
     left: 50%;
@@ -434,38 +527,38 @@
     z-index: 2;
     font-size: 9px;
     font-weight: 700;
-    color: #fff;
+    color: var(--lss-background-image-text);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
     pointer-events: none;
     white-space: nowrap;
 }
 
-.lichsoma-stage-bg-time-media {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-media {
     flex: 1;
     min-height: 0;
     position: relative;
 }
 
 /* 각 칸 너비의 1/3만 보이게 배경을 가로 3배로 깔고 위치로 좌·중·우 1/3 선택 */
-.lichsoma-stage-bg-time-slice {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-slice {
     background-repeat: no-repeat;
     background-size: 300% 100%;
 }
 
-.lichsoma-stage-bg-time-slice--left {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-slice--left {
     background-position: left center;
 }
 
-.lichsoma-stage-bg-time-slice--center {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-slice--center {
     background-position: center center;
 }
 
-.lichsoma-stage-bg-time-slice--right {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-slice--right {
     background-position: right center;
 }
 
 /* 빈 칸: 미디어 영역 정중앙에 추가(+) 조작 — 드래그 제외는 스크립트에서 처리 */
-.lichsoma-stage-bg-time-placeholder-inner {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-placeholder-inner {
     position: absolute;
     inset: 0;
     display: flex;
@@ -475,7 +568,7 @@
     cursor: pointer;
 }
 
-.lichsoma-stage-bg-time-placeholder-inner .lichsoma-stage-bg-time-add-btn {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-placeholder-inner .lichsoma-stage-bg-time-add-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -484,19 +577,19 @@
     border-radius: 50%;
     border: 2px dashed rgba(255, 255, 255, 0.35);
     background: rgba(0, 0, 0, 0.45);
-    color: var(--color-text-dark-secondary, #aaa);
+    color: var(--lss-ui-muted, var(--color-text-dark-secondary, #aaa));
     font-size: 15px;
     box-sizing: border-box;
     transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-.lichsoma-stage-bg-time-cell:hover .lichsoma-stage-bg-time-placeholder-inner .lichsoma-stage-bg-time-add-btn {
-    border-color: #ffbb00;
-    color: #ffbb00;
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-cell:hover .lichsoma-stage-bg-time-placeholder-inner .lichsoma-stage-bg-time-add-btn {
+    border-color: var(--lss-background-accent);
+    color: var(--lss-background-accent);
 }
 
 /* 이미지 있는 칸: 정중앙 삭제 — 호버 시 표시 */
-.lichsoma-stage-bg-time-clear {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-clear {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -508,7 +601,7 @@
     border: none;
     border-radius: 50%;
     background: none;
-    color: #fff;
+    color: var(--lss-background-image-text);
     cursor: pointer;
     z-index: 4;
     display: flex;
@@ -520,19 +613,19 @@
     transition: opacity 0.15s ease, background 0.15s ease;
 }
 
-.lichsoma-stage-bg-time-cell:hover .lichsoma-stage-bg-time-clear {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-cell:hover .lichsoma-stage-bg-time-clear {
     opacity: 1;
     pointer-events: auto;
 }
 
-.lichsoma-stage-bg-time-clear:hover {
-    border: 2px dashed #dc3545;
-    background: rgb(255, 255, 255, 0.5);
-    color: #dc3545;
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-time-clear:hover {
+    border: 2px dashed var(--lss-background-danger);
+    background: var(--lss-background-delete-bg);
+    color: var(--lss-background-danger);
 }
 
-.lichsoma-stage-bg-hint {
+:where(.lichsoma-stage-background-setting-app) .lichsoma-stage-bg-hint {
     font-size: 11px;
-    color: var(--color-text-dark-secondary, #999);
+    color: var(--lss-ui-muted, var(--color-text-dark-secondary, #999));
     flex-shrink: 0;
 }

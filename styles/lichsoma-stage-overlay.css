@@ -1,0 +1,202 @@
+/* 스테이지 오버레이: 부모(#interface 등) 전체를 덮음 */
+#lichsoma-stage-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0);
+    pointer-events: none;
+    /* UI(#sidebar, 헤더 등)보다 낮게 — 배경 어둡기가 인터페이스를 덮지 않음 */
+    z-index: 25;
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out;
+}
+
+/* 숨김 상태 (페이드 아웃) */
+#lichsoma-stage-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+/* 스테이지를 켜고 끌 때 이미 올라가 있던 스피커와 대화창도 배경과 함께 자연스럽게 나타나거나 사라지게 한다. */
+#lichsoma-stage-overlay.lichsoma-stage-overlay--entering .stage-character-wrapper:not(.preparing):not(.expanding):not(.slide-in-new):not(.removing):not(.shrinking) .stage-character {
+    animation: lichsomaStageExistingSpeakerFadeIn 0.52s ease-out both;
+}
+
+#lichsoma-stage-overlay.lichsoma-stage-overlay--leaving .stage-character-wrapper {
+    pointer-events: none !important;
+}
+
+#lichsoma-stage-overlay.lichsoma-stage-overlay--leaving .stage-character-wrapper .stage-character {
+    animation: lichsomaStageSpeakerFadeOut 0.52s ease-in both !important;
+}
+
+#lichsoma-stage-overlay.lichsoma-stage-overlay--entering .stage-standing-dialogue-region {
+    animation: lichsomaStageDialogueFadeIn 0.52s ease-out both;
+}
+
+#lichsoma-stage-overlay.lichsoma-stage-overlay--leaving .stage-standing-dialogue-region {
+    animation: lichsomaStageDialogueFadeOut 0.52s ease-in both !important;
+    pointer-events: none !important;
+}
+
+@keyframes lichsomaStageExistingSpeakerFadeIn {
+    0% {
+        opacity: 0;
+        filter: blur(2px);
+    }
+    100% {
+        opacity: 1;
+        filter: blur(0);
+    }
+}
+
+@keyframes lichsomaStageSpeakerFadeOut {
+    0% {
+        opacity: 1;
+        filter: blur(0);
+    }
+    100% {
+        opacity: 0;
+        filter: blur(2px);
+    }
+}
+
+@keyframes lichsomaStageDialogueFadeIn {
+    0% {
+        opacity: 0;
+        filter: blur(2px);
+    }
+    100% {
+        opacity: 1;
+        filter: blur(0);
+    }
+}
+
+@keyframes lichsomaStageDialogueFadeOut {
+    0% {
+        opacity: 1;
+        filter: blur(0);
+    }
+    100% {
+        opacity: 0;
+        filter: blur(2px);
+    }
+}
+
+/* 캐릭터 영역: 예전 오버레이와 동일 너비(뷰포트 − 사이드바). JS가 --sidebar-width 갱신 */
+#lichsoma-stage-overlay .stage-characters-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: calc(100% - var(--sidebar-width, 300px));
+    height: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    z-index: 100;
+    isolation: isolate;
+}
+
+/* 액터 제거 애니메이션: 캐릭터는 왼쪽에서 오른쪽으로 빠지고, 대화창은 제자리에서 페이드아웃한다. */
+:where(#lichsoma-stage-overlay) .stage-character-wrapper.removing {
+    pointer-events: none;
+}
+
+:where(#lichsoma-stage-overlay) .stage-character-wrapper.removing .stage-character {
+    animation: lichsomaStagePortraitSlideOut 0.65s cubic-bezier(0.55, 0.085, 0.68, 0.53) both !important;
+}
+
+:where(#lichsoma-stage-overlay) .stage-standing-dialogue-region.stage-dialogue-exiting {
+    animation: lichsomaStageDialogueFadeOut 0.65s ease-in both !important;
+    pointer-events: none !important;
+}
+
+@keyframes lichsomaStagePortraitSlideOut {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(150px);
+    }
+}
+
+/* 개별 캐릭터 이미지 — 배경(.lichsoma-stage-background-img)보다 위에 그려지도록 명시 */
+:where(#lichsoma-stage-overlay) .stage-character {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    flex: 1;
+    width: 100%;
+    max-height:400px;
+    /* fadeIn 애니메이션 제거 - wrapper의 slide-in-new만 사용 */
+}
+
+/* drop-shadow는 마스크와 같은 요소에 두면 직사각형으로 잘려 보임 → 래퍼에만 필터 적용 */
+:where(#lichsoma-stage-overlay) .stage-character-portrait {
+    display: inline-block;
+    max-width: var(--lss-portrait-size);
+    max-height: var(--lss-portrait-size);
+    line-height: 0;
+    flex-shrink: 0;
+    filter: var(--lss-portrait-shadow);
+}
+
+:where(#lichsoma-stage-overlay) .stage-character-portrait img {
+    display: block;
+    max-width: var(--lss-portrait-size);
+    max-height: var(--lss-portrait-size);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    object-position: bottom left;
+    /* 하단은 좌·우와 동일하게 가장자리 ~5%만 페이드, 좌우는 가로 그라데이션 — 겹치면 모서리가 더 부드럽게 끊김 */
+    -webkit-mask-image: var(--lss-portrait-mask);
+    -webkit-mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-composite: source-in;
+    mask-image: var(--lss-portrait-mask);
+    mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-composite: intersect;
+    transition: opacity 0.36s ease-in-out;
+}
+
+:where(#lichsoma-stage-overlay) .stage-character-portrait img.lichsoma-stage-portrait-fading,
+:where(.lichsoma-speaker-backstage-container) .actor-portrait img.lichsoma-stage-portrait-fading {
+    opacity: 0;
+}
+
+/* Only removable character images intercept input; empty stage space remains
+ * available to the canvas. Put the glow outside the portrait's image mask. */
+#lichsoma-stage-overlay .stage-character-portrait.stage-removable img {
+    pointer-events: auto;
+    cursor: context-menu;
+}
+#lichsoma-stage-overlay .stage-character-wrapper .stage-character .stage-character-portrait.stage-removable:hover {
+    filter: drop-shadow(0 0 4px var(--lss-remove-glow-strong))
+        drop-shadow(0 0 12px var(--lss-remove-glow-soft));
+}
+#lichsoma-stage-overlay .stage-character-wrapper:is(.removing, .shrinking) .stage-character-portrait img {
+    pointer-events: none;
+}
+#lichsoma-stage-overlay:is(.hidden, .lichsoma-stage-overlay--leaving) .stage-character-portrait img {
+    pointer-events: none;
+}
+
+/* 캐릭터 이름 (이미지 좌측 하단에 겹침) — 기본값은 테마·모듈 설정으로 덮어씀 */
+:where(#lichsoma-stage-overlay) .stage-character .character-name {
+    position: absolute;
+    font-family: var(--font-body, sans-serif);
+    font-size: var(--lss-name-size);
+    font-weight: bold;
+    text-shadow: var(--lss-name-shadow);
+    z-index: 10;
+}
+

@@ -1,23 +1,19 @@
+import './lichsoma-speaker-stage-compat.js';
+import { createBackgroundSettingApp } from './lichsoma-stage-background-settings.js';
+
 /**
  * 스테이지 배경 이미지 — 장면과 무관하게 표시·전환 (월드 설정 + 파일 픽커 그리드)
  */
 
 const MODULE_ID = 'lichsoma-speaker-stage';
 
-const LTW_MODULE_ID = 'lichsoma-time-and-weather';
-/** lichsoma-daily-calendar — time-and-weather 배포 분기, 동일 `timeOfDay` 설정 키 */
-const LDC_MODULE_ID = 'lichsoma-daily-calendar';
-const LTW_SETTING_TIME_OF_DAY = 'timeOfDay';
+const DAILY_CALENDAR_MODULE_ID = 'lichsoma-daily-calendar';
+const TIME_OF_DAY_SETTING = 'timeOfDay';
 const TIME_OF_DAY_KEYS = ['morning', 'afternoon', 'latenight'];
 
-/**
- * 시간대 월드 설정을 제공하는 모듈 ID. Time & Weather 우선, 없으면 Daily Calendar.
- * @returns {string|null}
- */
-function getActiveTimeOfDayModuleId() {
-    if (game.modules.get(LTW_MODULE_ID)?.active) return LTW_MODULE_ID;
-    if (game.modules.get(LDC_MODULE_ID)?.active) return LDC_MODULE_ID;
-    return null;
+/** 시간대 제공자는 Daily Calendar만 사용한다. */
+function isDailyCalendarActive() {
+    return game.modules.get(DAILY_CALENDAR_MODULE_ID)?.active === true;
 }
 
 const SETTINGS = {
@@ -26,7 +22,7 @@ const SETTINGS = {
     MINI_MODE: 'stageBackgroundMiniMode',
     /** 월드 — Interface(Token 위)에서 배경을 그림 · 프레임/오버레이 포인터 차단(config에서 토글, 리로드 필요) */
     NARRATIVE_MODE: 'stageBackgroundNarrativeMode',
-    /** 월드 — Time & Weather 또는 Daily Calendar 활성 + 본 설정 ON일 때 슬롯별 오전/오후/심야 이미지 사용 */
+    /** 월드 — Daily Calendar 활성 + 본 설정 ON일 때 슬롯별 오전/오후/심야 이미지 사용 */
     LINK_TIME_BACKGROUNDS: 'stageBackgroundLinkTimeOfDay'
 };
 
@@ -37,6 +33,9 @@ const STAGE_BG_CROSSFADE_MS = 480;
 
 /** 진행 중 페이드를 끊고 새 장면으로 바꿀 때 CanvasAnimation 이름 */
 const STAGE_BG_CROSSFADE_ANIM_NAME = 'lichsomaSpeakerStageBgCrossfade';
+
+/** 스테이지 자체 ON/OFF 또는 없음↔있음 전환 시 이미지+검은 바탕을 함께 페이드 */
+const STAGE_BG_STAGE_FADE_ANIM_NAME = 'lichsomaSpeakerStageBgStageFade';
 
 /** 월드 단위 — 미세 좌표 흔들림마다 resize가 돌면 페이드 직후 알파처럼 보이는 깜빡임이 날 수 있음 */
 const STAGE_BG_MESH_RESIZE_EPS = 3;
@@ -111,9 +110,8 @@ function resolveStageBgSourcePath(rec) {
     }
     let tod = 'morning';
     try {
-        const modId = getActiveTimeOfDayModuleId();
-        if (modId) {
-            const v = game.settings.get(modId, LTW_SETTING_TIME_OF_DAY);
+        if (isDailyCalendarActive()) {
+            const v = game.settings.get(DAILY_CALENDAR_MODULE_ID, TIME_OF_DAY_SETTING);
             if (TIME_OF_DAY_KEYS.includes(v)) tod = v;
         }
     } catch {
@@ -168,6 +166,7 @@ function whenStageBgTextureRenderable(tex) {
 export class StageBackground {
     static _interfaceObserver = null;
     static _overlayWatchStarted = false;
+    static _layerMountScheduled = false;
     /** @type {MutationObserver|null} */
     static _overlayAttrObserver = null;
     /** @type {Element|null} */
@@ -178,14 +177,23 @@ export class StageBackground {
     static _stageBgInterfaceRoot = null;
     /** 내러티브 모드: 루트 안 교차 페이드용 스프라이트 2장 */
     static _stageBgInterfaceSprites = null;
-    /** 비내러티브 모드: canvas.primary에 직접 붙는 일반 PIXI.Sprite 2장 — PrimarySpriteMesh의 Scene clipping 회피 */
+    /** 비내러티브 모드: 배경 이미지와 검은 바탕을 함께 페이드시키는 Primary 루트 */
+    static _stageBgPrimaryRoot = null;
+    /** 비내러티브 모드: Primary 루트 안 일반 PIXI.Sprite 2장 — PrimarySpriteMesh의 Scene clipping 회피 */
     static _stageBgPrimarySprites = null;
+    /** 풀 모드에서 레터박스·잘림 영역을 검게 덮는 Primary 레이어용 배경 */
+    static _stageBgPrimaryBlackout = null;
+    /** 풀 모드에서 레터박스·잘림 영역을 검게 덮는 Interface 레이어용 배경 */
+    static _stageBgInterfaceBlackout = null;
     /** @type {number} 0 또는 1 — 페이드 종료 후 현재 이미지를 들고 있는 메시 */
     static _stageBgStableIdx = 0;
     /** 마지막으로 표시에 성공한 이미지 URL(route 후) — 동일 선택 시 페이드 생략 */
     static _stageBgDisplayedUrl = '';
     /** 슬롯↔슬롯 교차 페이드 중에는 두 메시 모두 그려야 함(_syncStageBgVisibility 분기용) */
     static _stageBgCrossfadeActive = false;
+    /** 스테이지 ON/OFF 페이드 중에는 overlay.hidden이어도 drawable을 유지 */
+    static _stageBgStageFadeActive = false;
+    static _stageBgStageFadeRequestId = 0;
     static _stageBgCanvasHooksRegistered = false;
     /** 팬·줌 매 프레임 화면 정렬 — canvasPan만으로는 관성 중 한 박자 어긋남 → 떨림 */
     static _stageBgTickerCb = null;
@@ -220,9 +228,12 @@ export class StageBackground {
             Hooks.on('lichsomaSpeakerStageLayout', () => {
                 StageBackground._updateStageBgMeshLayout();
             });
+            Hooks.on('lichsomaSpeakerStageVisibility', (visible) => {
+                StageBackground._onStageOverlayVisibilityChanged(visible);
+            });
             this._startLayerMountObservers();
             this._tryMountBackgroundLayers();
-            if (game.canvas?.ready) {
+            if (canvas?.ready) {
                 this._tryMountBackgroundLayers();
                 this.refreshBackgroundImage();
             }
@@ -301,33 +312,59 @@ export class StageBackground {
         await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_INDEX, clamped);
     }
 
-    /** Time & Weather 또는 Daily Calendar 활성 + 월드 설정 「시간대 연동」 ON */
+    /** Daily Calendar 활성 + 월드 설정 「시간대 연동」 ON */
     static isTimeVariantBackgroundActive() {
         try {
-            return !!(getActiveTimeOfDayModuleId() && game.settings.get(MODULE_ID, SETTINGS.LINK_TIME_BACKGROUNDS));
+            return !!(isDailyCalendarActive() && game.settings.get(MODULE_ID, SETTINGS.LINK_TIME_BACKGROUNDS));
         } catch {
             return false;
         }
     }
 
+    static _isSettingChange(setting, namespace, key) {
+        if (!setting || !namespace || !key) return false;
+        const rawKey = setting.key ?? '';
+        const rawNamespace = setting.namespace ?? setting.parent?.namespace ?? '';
+        return rawKey === `${namespace}.${key}` || (rawNamespace === namespace && rawKey === key);
+    }
+
+    static _resyncStageBgDisplayMode() {
+        this._syncStageBgMiniModeShell();
+        this._syncStageBgNarrativeModeUI();
+        this._updateStageBgMeshLayout();
+        this._syncStageBgVisibility();
+
+        const syncAfterLayout = () => {
+            StageBackground._syncStageBgMiniModeShell();
+            StageBackground._syncStageBgNarrativeModeUI();
+            StageBackground._updateStageBgMeshLayout();
+            StageBackground._syncStageBgVisibility();
+        };
+
+        requestAnimationFrame(() => {
+            syncAfterLayout();
+            requestAnimationFrame(syncAfterLayout);
+        });
+    }
+
     static _onUpdateSetting(setting) {
-        const k = setting?.key ?? '';
-        if (k === `${MODULE_ID}.${SETTINGS.SLOTS}` || k === `${MODULE_ID}.${SETTINGS.ACTIVE_INDEX}`) {
+        if (
+            this._isSettingChange(setting, MODULE_ID, SETTINGS.SLOTS) ||
+            this._isSettingChange(setting, MODULE_ID, SETTINGS.ACTIVE_INDEX)
+        ) {
             this.refreshBackgroundImage();
         }
-        if (k === `${MODULE_ID}.${SETTINGS.LINK_TIME_BACKGROUNDS}`) {
+        if (this._isSettingChange(setting, MODULE_ID, SETTINGS.LINK_TIME_BACKGROUNDS)) {
             this.refreshBackgroundImage();
         }
         if (
-            (k === `${LTW_MODULE_ID}.${LTW_SETTING_TIME_OF_DAY}` || k === `${LDC_MODULE_ID}.${LTW_SETTING_TIME_OF_DAY}`) &&
+            this._isSettingChange(setting, DAILY_CALENDAR_MODULE_ID, TIME_OF_DAY_SETTING) &&
             this.isTimeVariantBackgroundActive()
         ) {
             this.refreshBackgroundImage();
         }
-        if (k === `${MODULE_ID}.${SETTINGS.MINI_MODE}`) {
-            this._syncStageBgMiniModeShell();
-            this._updateStageBgMeshLayout();
-            this._syncStageBgNarrativeModeUI();
+        if (this._isSettingChange(setting, MODULE_ID, SETTINGS.MINI_MODE)) {
+            this._resyncStageBgDisplayMode();
         }
     }
 
@@ -395,11 +432,44 @@ export class StageBackground {
         this.refreshBackgroundImage();
     }
 
+    static _scheduleTryMountBackgroundLayers() {
+        if (this._layerMountScheduled) return;
+        this._layerMountScheduled = true;
+        requestAnimationFrame(() => {
+            this._layerMountScheduled = false;
+            this._tryMountBackgroundLayers();
+        });
+    }
+
+    static _mutationTouchesStageBackground(mutations) {
+        const overlay = document.getElementById('lichsoma-stage-overlay');
+        if (!overlay || !this._isBackgroundLayersComplete()) return true;
+
+        const isRelevantNode = (node) => {
+            if (!(node instanceof Element)) return false;
+            return node.id === 'lichsoma-stage-overlay'
+                || node.classList.contains('lichsoma-stage-background-shell')
+                || node.classList.contains('lichsoma-stage-background-frame')
+                || node.classList.contains('lichsoma-stage-bg-scene-select')
+                || !!node.querySelector?.('#lichsoma-stage-overlay, .lichsoma-stage-background-shell, .lichsoma-stage-background-frame, .lichsoma-stage-bg-scene-select');
+        };
+
+        return mutations.some((mutation) => {
+            if (isRelevantNode(mutation.target)) return true;
+            for (const node of mutation.addedNodes || []) if (isRelevantNode(node)) return true;
+            for (const node of mutation.removedNodes || []) if (isRelevantNode(node)) return true;
+            return false;
+        });
+    }
+
     static _startLayerMountObservers() {
         const iface = document.getElementById('interface');
         if (!iface || this._overlayWatchStarted) return;
         this._overlayWatchStarted = true;
-        this._interfaceObserver = new MutationObserver(() => this._tryMountBackgroundLayers());
+        this._interfaceObserver = new MutationObserver((mutations) => {
+            if (!StageBackground._mutationTouchesStageBackground(mutations)) return;
+            StageBackground._scheduleTryMountBackgroundLayers();
+        });
         this._interfaceObserver.observe(iface, { childList: true, subtree: true });
     }
 
@@ -451,15 +521,155 @@ export class StageBackground {
         return this._stageBgUsesInterfaceLayer() || !!this._stageBgPrimarySprites;
     }
 
+    static _stageBgBlackoutDrawable() {
+        return this._stageBgUsesInterfaceLayer() ? this._stageBgInterfaceBlackout : this._stageBgPrimaryBlackout;
+    }
+
+    static _stageBgRootDrawable() {
+        return this._stageBgUsesInterfaceLayer() ? this._stageBgInterfaceRoot : this._stageBgPrimaryRoot;
+    }
+
+    static _stageBgHasRenderableTexture() {
+        const drawables = this._stageBgDrawablePair();
+        return !!drawables?.some(
+            (d) => d && !d.destroyed && d.texture && d.texture !== PIXI.Texture.EMPTY && d.texture.valid
+        );
+    }
+
+    static _prepareStageBgRootFade(showing) {
+        if (!canvas?.ready) return;
+        this._ensureStageBackgroundPixi();
+        const root = this._stageBgRootDrawable();
+        if (!root || root.destroyed || !this._stageBgHasRenderableTexture()) return;
+
+        LichsomaSpeakerStageCompat.CanvasAnimation?.terminateAnimation?.(STAGE_BG_STAGE_FADE_ANIM_NAME);
+        this._stageBgStageFadeActive = true;
+        if (showing && root.alpha >= 0.999) root.alpha = 0;
+        this._updateStageBgMeshLayout();
+        this._syncStageBgVisibility();
+    }
+
+    static _onStageOverlayVisibilityChanged(showing) {
+        const requestId = ++this._stageBgStageFadeRequestId;
+        this._prepareStageBgRootFade(!!showing);
+        this._refreshBgTail = this._refreshBgTail
+            .catch(() => {})
+            .then(() => this._fadeStageBgRootVisibility(!!showing, requestId));
+    }
+
+    static async _fadeStageBgRootVisibility(showing, requestId) {
+        if (!canvas?.ready) return;
+        this._ensureStageBackgroundPixi();
+
+        const root = this._stageBgRootDrawable();
+        const CanvasAnimation = LichsomaSpeakerStageCompat.CanvasAnimation;
+        if (!root || root.destroyed || !CanvasAnimation || !this._stageBgHasRenderableTexture()) {
+            if (requestId === this._stageBgStageFadeRequestId) this._stageBgStageFadeActive = false;
+            if (root && !root.destroyed) root.alpha = 1;
+            this._syncStageBgVisibility();
+            return;
+        }
+
+        CanvasAnimation.terminateAnimation(STAGE_BG_STAGE_FADE_ANIM_NAME);
+        this._stageBgStageFadeActive = true;
+        this._syncStageBgVisibility();
+
+        let completed = true;
+        try {
+            completed = await CanvasAnimation.animate(
+                [{ parent: root, attribute: 'alpha', from: root.alpha, to: showing ? 1 : 0 }],
+                {
+                    duration: STAGE_BG_CROSSFADE_MS,
+                    easing: 'easeInOutCosine',
+                    name: STAGE_BG_STAGE_FADE_ANIM_NAME
+                }
+            );
+        } catch {
+            completed = false;
+        }
+
+        if (!completed) {
+            if (requestId === this._stageBgStageFadeRequestId) {
+                this._stageBgStageFadeActive = false;
+                if (root && !root.destroyed) root.alpha = 1;
+                this._syncStageBgVisibility();
+            }
+            return;
+        }
+        if (requestId !== this._stageBgStageFadeRequestId) return;
+        root.alpha = showing ? 1 : 0;
+        this._stageBgStageFadeActive = false;
+        this._syncStageBgVisibility();
+    }
+
+    static _destroyPrimaryStageBgBlackout() {
+        const g = this._stageBgPrimaryBlackout;
+        this._stageBgPrimaryBlackout = null;
+        if (!g || g.destroyed) return;
+        try {
+            g.parent?.removeChild(g);
+        } catch {
+            /* noop */
+        }
+        try {
+            g.destroy({ children: true });
+        } catch {
+            /* noop */
+        }
+    }
+
+    /** 풀 모드 배경은 DOM 오버레이가 아니라 PIXI 레이어에서 검은 바탕을 그려야 실제 이미지·토큰을 가리지 않는다. */
+    static _updateStageBgBlackoutLayout() {
+        const g = this._stageBgBlackoutDrawable();
+        if (!g || g.destroyed || !canvas?.ready) return;
+        const mini = !!game.settings.get(MODULE_ID, SETTINGS.MINI_MODE);
+        if (mini) {
+            g.visible = false;
+            return;
+        }
+
+        const width = Math.max(1, window.innerWidth || document.documentElement?.clientWidth || 1);
+        const height = Math.max(1, window.innerHeight || document.documentElement?.clientHeight || 1);
+        const tl = canvas.canvasCoordinatesFromClient({ x: 0, y: 0 });
+        const br = canvas.canvasCoordinatesFromClient({ x: width, y: height });
+        const x = Math.min(tl.x, br.x);
+        const y = Math.min(tl.y, br.y);
+        const w = Math.max(1, Math.abs(br.x - tl.x));
+        const h = Math.max(1, Math.abs(br.y - tl.y));
+
+        g.clear();
+        g.beginFill(0x000000, 1);
+        g.drawRect(x, y, w, h);
+        g.endFill();
+    }
+
     static _destroyPrimaryStageBgSprites() {
+        const root = this._stageBgPrimaryRoot;
+        this._stageBgPrimaryRoot = null;
         const sprites = this._stageBgPrimarySprites;
         this._stageBgPrimarySprites = null;
+        if (root && !root.destroyed) {
+            this._stageBgPrimaryBlackout = null;
+            try {
+                canvas?.primary?.removeChild(root);
+            } catch {
+                /* noop */
+            }
+            try {
+                root.destroy({ children: true });
+            } catch {
+                /* noop */
+            }
+            return;
+        }
+
+        this._destroyPrimaryStageBgBlackout();
         if (!sprites?.length) return;
 
         for (const s of sprites) {
             if (!s || s.destroyed) continue;
             try {
-                canvas?.primary?.removeChild(s);
+                s.parent?.removeChild(s);
             } catch {
                 /* noop */
             }
@@ -485,18 +695,27 @@ export class StageBackground {
         if (!canvas?.ready || !canvas.primary) return;
 
         const sprites = this._stageBgPrimarySprites;
+        const root = this._stageBgPrimaryRoot;
         const healthy =
             sprites?.[0] &&
             !sprites[0].destroyed &&
             sprites?.[1] &&
             !sprites[1].destroyed &&
-            sprites[0].parent === canvas.primary &&
-            sprites[1].parent === canvas.primary;
+            root &&
+            !root.destroyed &&
+            root.parent === canvas.primary &&
+            sprites[0].parent === root &&
+            sprites[1].parent === root &&
+            this._stageBgPrimaryBlackout &&
+            !this._stageBgPrimaryBlackout.destroyed &&
+            this._stageBgPrimaryBlackout.parent === root;
 
         if (healthy) {
             const sortLayer = this._getPrimaryStageBgSortLayer();
+            root.sortLayer = sortLayer;
+            root.sort = -999999;
+            this._stageBgPrimaryBlackout.sort = -999999;
             for (const s of sprites) {
-                s.sortLayer = sortLayer;
                 s.sort = s === sprites[0] ? -999998 : -999997;
             }
             try {
@@ -528,12 +747,26 @@ export class StageBackground {
         this._destroyPrimaryStageBgSprites();
 
         const sortLayer = this._getPrimaryStageBgSortLayer();
+        const rootContainer = new PIXI.Container();
+        rootContainer.name = 'lichsoma-speaker-stage-bg-primary-root';
+        rootContainer.eventMode = 'none';
+        rootContainer.interactiveChildren = false;
+        rootContainer.sortableChildren = true;
+        rootContainer.sortLayer = sortLayer;
+        rootContainer.sort = -999999;
+        rootContainer.alpha = 1;
+
+        const blackout = new PIXI.Graphics();
+        blackout.name = 'lichsoma-speaker-stage-bg-blackout-primary';
+        blackout.eventMode = 'none';
+        blackout.sort = -999999;
+        blackout.visible = false;
+
         const mkSprite = (sort) => {
             const s = new PIXI.Sprite(PIXI.Texture.EMPTY);
             s.name = 'lichsoma-speaker-stage-bg-primary-sprite';
             s.eventMode = 'none';
             s.anchor?.set(0, 0);
-            s.sortLayer = sortLayer;
             s.sort = sort;
             s.alpha = 1;
             s.visible = false;
@@ -543,8 +776,10 @@ export class StageBackground {
         const sUnder = mkSprite(-999998);
         const sOver = mkSprite(-999997);
 
-        canvas.primary.addChild(sUnder);
-        canvas.primary.addChild(sOver);
+        rootContainer.addChild(blackout);
+        rootContainer.addChild(sUnder);
+        rootContainer.addChild(sOver);
+        canvas.primary.addChild(rootContainer);
 
         try {
             if (canvas.primary.sortDirty !== undefined) canvas.primary.sortDirty = true;
@@ -552,6 +787,8 @@ export class StageBackground {
             /* noop */
         }
 
+        this._stageBgPrimaryRoot = rootContainer;
+        this._stageBgPrimaryBlackout = blackout;
         this._stageBgPrimarySprites = [sUnder, sOver];
         this._stageBgStableIdx = 0;
     }
@@ -560,6 +797,7 @@ export class StageBackground {
         const root = this._stageBgInterfaceRoot;
         this._stageBgInterfaceRoot = null;
         this._stageBgInterfaceSprites = null;
+        this._stageBgInterfaceBlackout = null;
         if (!root || root.destroyed) return;
         try {
             canvas?.interface?.removeChild(root);
@@ -585,7 +823,10 @@ export class StageBackground {
             !sprites[1].destroyed &&
             root &&
             !root.destroyed &&
-            root.parent === canvas.interface;
+            root.parent === canvas.interface &&
+            this._stageBgInterfaceBlackout &&
+            !this._stageBgInterfaceBlackout.destroyed &&
+            this._stageBgInterfaceBlackout.parent === root;
 
         if (healthy) return;
 
@@ -624,9 +865,17 @@ export class StageBackground {
         r.interactiveChildren = false;
         r.sortableChildren = true;
         r.zIndex = STAGE_BG_INTERFACE_LAYER_Z;
+        r.alpha = 1;
+
+        const blackout = new PIXI.Graphics();
+        blackout.name = 'lichsoma-speaker-stage-bg-blackout-interface';
+        blackout.eventMode = 'none';
+        blackout.sort = -999999;
+        blackout.visible = false;
 
         const sUnder = mkSprite(-999998);
         const sOver = mkSprite(-999997);
+        r.addChild(blackout);
         r.addChild(sUnder);
         r.addChild(sOver);
 
@@ -634,6 +883,7 @@ export class StageBackground {
         canvas.interface.sortChildren?.();
 
         this._stageBgInterfaceRoot = r;
+        this._stageBgInterfaceBlackout = blackout;
         this._stageBgInterfaceSprites = [sUnder, sOver];
         this._stageBgStableIdx = 0;
     }
@@ -739,7 +989,8 @@ export class StageBackground {
 
         this._destroyInterfaceStageBgSprites();
 
-        const PrimarySpriteMesh = foundry.canvas.primary.PrimarySpriteMesh;
+        const PrimarySpriteMesh = LichsomaSpeakerStageCompat.PrimarySpriteMesh;
+        if (!PrimarySpriteMesh) return;
         const SORT = foundry.canvas.groups.PrimaryCanvasGroup.SORT_LAYERS;
         const mkMesh = (sortOrder) => {
             const m = new PrimarySpriteMesh({
@@ -771,6 +1022,11 @@ export class StageBackground {
         window.addEventListener('resize', () => StageBackground._updateStageBgMeshLayout());
     }
 
+    static _stageBgOverlayVisibleForTicker() {
+        const ov = document.getElementById('lichsoma-stage-overlay');
+        return !!(ov && !ov.classList.contains('hidden'));
+    }
+
     static _attachStageBgTicker() {
         const app = canvas?.app;
         if (!app?.ticker) return;
@@ -780,6 +1036,9 @@ export class StageBackground {
         if (this._stageBgTickerAttached) return;
 
         this._stageBgTickerCb = () => {
+            if (!StageBackground._stageBgOverlayVisibleForTicker()
+                && !StageBackground._stageBgCrossfadeActive
+                && !StageBackground._stageBgStageFadeActive) return;
             const drawables = StageBackground._stageBgDrawablePair();
             if (!drawables || !canvas?.ready) return;
             const hasRenderableTex = drawables.some(
@@ -817,8 +1076,10 @@ export class StageBackground {
     static _destroyPixiStageBackgroundMesh() {
         this._detachStageBgTicker();
         this._refreshBgTail = Promise.resolve();
-        foundry.canvas.animation.CanvasAnimation.terminateAnimation(STAGE_BG_CROSSFADE_ANIM_NAME);
+        LichsomaSpeakerStageCompat.CanvasAnimation?.terminateAnimation?.(STAGE_BG_CROSSFADE_ANIM_NAME);
+        LichsomaSpeakerStageCompat.CanvasAnimation?.terminateAnimation?.(STAGE_BG_STAGE_FADE_ANIM_NAME);
         this._stageBgCrossfadeActive = false;
+        this._stageBgStageFadeActive = false;
         const meshes = this._stageBgMeshes;
         this._stageBgMeshes = null;
         this._stageBgDisplayedUrl = '';
@@ -901,6 +1162,7 @@ export class StageBackground {
         }
 
         const r = frame.getBoundingClientRect();
+        this._updateStageBgBlackoutLayout();
         if (r.width < 2 || r.height < 2) {
             for (const d of drawables) {
                 if (d && !d.destroyed) d.visible = false;
@@ -957,7 +1219,7 @@ export class StageBackground {
         overlayEl.querySelectorAll(':scope > .lichsoma-stage-background-root').forEach((el) => el.remove());
     }
 
-    /** 장면 셀렉트만 오버레이에 두고, 레이아웃은 보드 쪽 셸과 동일 클래스로 맞춤 */
+    /** 배경 측정 프레임과 장면 컨트롤을 오버레이에 둔다. 컨트롤은 미니 모드 기준 좌표를 항상 유지한다. */
     static _ensureOverlaySceneShell(overlayEl) {
         let shell = overlayEl.querySelector(':scope > .lichsoma-stage-background-shell');
         if (!shell) {
@@ -967,11 +1229,11 @@ export class StageBackground {
                 <div class="lichsoma-stage-background-shell-inner">
                     <div class="lichsoma-stage-background-frame lichsoma-stage-background-frame--overlay-ui">
                         <div class="lichsoma-stage-bg-narrative-blocker" aria-hidden="true"></div>
-                        <div class="lichsoma-stage-bg-scene-bar">
-                            <button type="button" id="lichsoma-stage-bg-mini-toggle" class="lichsoma-stage-bg-mini-toggle"></button>
-                            <select id="lichsoma-stage-bg-overlay-select" class="lichsoma-stage-bg-scene-select" aria-label=""></select>
-                        </div>
                     </div>
+                </div>
+                <div class="lichsoma-stage-bg-scene-bar">
+                    <button type="button" id="lichsoma-stage-bg-mini-toggle" class="lichsoma-stage-bg-mini-toggle"></button>
+                    <select id="lichsoma-stage-bg-overlay-select" class="lichsoma-stage-bg-scene-select" aria-label=""></select>
                 </div>
             `;
             const sel = shell.querySelector('.lichsoma-stage-bg-scene-select');
@@ -979,24 +1241,28 @@ export class StageBackground {
             overlayEl.insertBefore(shell, overlayEl.firstChild);
         } else {
             const frame = shell.querySelector('.lichsoma-stage-background-frame');
-            const bar = frame?.querySelector('.lichsoma-stage-bg-scene-bar');
-            if (frame && !bar) {
-                const wrap = document.createElement('div');
-                wrap.className = 'lichsoma-stage-bg-scene-bar';
-                wrap.innerHTML =
+            let bar = shell.querySelector(':scope > .lichsoma-stage-bg-scene-bar');
+            const legacyBar = frame?.querySelector('.lichsoma-stage-bg-scene-bar');
+            if (!bar && legacyBar) {
+                bar = legacyBar;
+                shell.appendChild(bar);
+            }
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.className = 'lichsoma-stage-bg-scene-bar';
+                bar.innerHTML =
                     '<button type="button" id="lichsoma-stage-bg-mini-toggle" class="lichsoma-stage-bg-mini-toggle"></button>' +
                     '<select id="lichsoma-stage-bg-overlay-select" class="lichsoma-stage-bg-scene-select" aria-label=""></select>';
-                const sel = wrap.querySelector('.lichsoma-stage-bg-scene-select');
-                if (sel) sel.setAttribute('aria-label', game.i18n.localize('SPEAKERSTAGE.Background.Overlay.SceneAria'));
-                frame.appendChild(wrap);
+                shell.appendChild(bar);
             }
-            const barFinal = frame?.querySelector('.lichsoma-stage-bg-scene-bar');
-            if (barFinal && !barFinal.querySelector('#lichsoma-stage-bg-mini-toggle')) {
+            const sel = bar.querySelector('.lichsoma-stage-bg-scene-select');
+            if (sel) sel.setAttribute('aria-label', game.i18n.localize('SPEAKERSTAGE.Background.Overlay.SceneAria'));
+            if (!bar.querySelector('#lichsoma-stage-bg-mini-toggle')) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.id = 'lichsoma-stage-bg-mini-toggle';
                 btn.className = 'lichsoma-stage-bg-mini-toggle';
-                barFinal.insertBefore(btn, barFinal.firstChild);
+                bar.insertBefore(btn, bar.firstChild);
             }
             if (frame && !frame.querySelector('.lichsoma-stage-bg-narrative-blocker')) {
                 const block = document.createElement('div');
@@ -1026,16 +1292,25 @@ export class StageBackground {
         btn.addEventListener('click', async () => {
             const cur = !!game.settings.get(MODULE_ID, SETTINGS.MINI_MODE);
             await game.settings.set(MODULE_ID, SETTINGS.MINI_MODE, !cur);
+            /* 일부 Foundry 버전/환경에서는 클라이언트 설정 updateSetting 훅 전달 형태가 달라
+             * 즉시 레이아웃 재동기화가 누락될 수 있으므로 클릭한 클라이언트는 직접 한 번 더 맞춘다. */
+            StageBackground._resyncStageBgDisplayMode();
         });
     }
 
     static _ensureOverlayAttributeObserver(overlayEl) {
         if (overlayEl === this._overlayAttrObservedTarget) return;
         if (this._overlayAttrObserver) this._overlayAttrObserver.disconnect();
+        let scheduled = false;
         this._overlayAttrObserver = new MutationObserver(() => {
-            StageBackground._updateStageBgMeshLayout();
-            StageBackground._syncStageBgVisibility();
-            StageBackground._syncStageBgNarrativeModeUI();
+            if (scheduled) return;
+            scheduled = true;
+            requestAnimationFrame(() => {
+                scheduled = false;
+                StageBackground._updateStageBgMeshLayout();
+                StageBackground._syncStageBgVisibility();
+                StageBackground._syncStageBgNarrativeModeUI();
+            });
         });
         this._overlayAttrObserver.observe(overlayEl, { attributes: true, attributeFilter: ['class'] });
         this._overlayAttrObservedTarget = overlayEl;
@@ -1050,11 +1325,19 @@ export class StageBackground {
     }
 
     static _syncStageBgVisibility() {
-        const meshes = this._stageBgDrawablePair();
-        if (!meshes?.length) return;
         const ov = document.getElementById('lichsoma-stage-overlay');
+        const meshes = this._stageBgDrawablePair();
+        const blackout = this._stageBgBlackoutDrawable();
+        if (!meshes?.length) {
+            if (blackout && !blackout.destroyed) blackout.visible = false;
+            ov?.classList.remove('lichsoma-stage-overlay--stage-bg-backdrop');
+            return;
+        }
         const overlayHidden = !ov || ov.classList.contains('hidden');
+        const stageDrawableVisible = !overlayHidden || this._stageBgStageFadeActive;
         const frameOk = this._stageBgOverlayFrameRenderable();
+        const mini = !!game.settings.get(MODULE_ID, SETTINGS.MINI_MODE);
+        let anyVisibleBackground = false;
 
         for (let i = 0; i < meshes.length; i++) {
             const mesh = meshes[i];
@@ -1062,8 +1345,16 @@ export class StageBackground {
             const hasTex = !!(mesh.texture && mesh.texture !== PIXI.Texture.EMPTY && mesh.texture.valid);
             const eligible =
                 hasTex && (this._stageBgCrossfadeActive || i === this._stageBgStableIdx);
-            mesh.visible = !overlayHidden && frameOk && eligible;
+            const visible = stageDrawableVisible && frameOk && eligible;
+            mesh.visible = visible;
+            if (visible) anyVisibleBackground = true;
         }
+
+        if (blackout && !blackout.destroyed) {
+            blackout.visible = !mini && stageDrawableVisible && frameOk && anyVisibleBackground;
+        }
+
+        ov?.classList.toggle('lichsoma-stage-overlay--stage-bg-backdrop', anyVisibleBackground);
     }
 
     /** 오버레이 우측 상단 장면 셀렉트 옵션·값·GM만 편집 */
@@ -1153,12 +1444,14 @@ export class StageBackground {
             if (ok) return;
         }
 
-        const CanvasAnimation = foundry.canvas.animation.CanvasAnimation;
+        const CanvasAnimation = LichsomaSpeakerStageCompat.CanvasAnimation;
+        if (!CanvasAnimation) return;
         CanvasAnimation.terminateAnimation(STAGE_BG_CROSSFADE_ANIM_NAME);
         this._snapStageBgMeshesAfterInterrupt();
 
         const stable = meshes[this._stageBgStableIdx];
         const incoming = meshes[1 - this._stageBgStableIdx];
+        const root = this._stageBgRootDrawable();
 
         if (!targetUrl) {
             const holder = meshes[this._stageBgStableIdx];
@@ -1172,15 +1465,25 @@ export class StageBackground {
                 return;
             }
 
+            if (root) CanvasAnimation.terminateAnimation(STAGE_BG_STAGE_FADE_ANIM_NAME);
+            if (root) {
+                this._stageBgStageFadeRequestId++;
+                this._stageBgStageFadeActive = false;
+            }
+            if (root && !root.destroyed) root.alpha = 1;
+            holder.alpha = 1;
             holder.visible = true;
+            this._updateStageBgMeshLayout();
+            this._syncStageBgVisibility();
+
             let completed = true;
             try {
                 completed = await CanvasAnimation.animate(
-                    [{ parent: holder, attribute: 'alpha', from: holder.alpha, to: 0 }],
+                    [{ parent: root ?? holder, attribute: 'alpha', from: root?.alpha ?? holder.alpha, to: 0 }],
                     {
                         duration: Math.round(STAGE_BG_CROSSFADE_MS * 0.85),
                         easing: 'easeInOutCosine',
-                        name: STAGE_BG_CROSSFADE_ANIM_NAME
+                        name: root ? STAGE_BG_STAGE_FADE_ANIM_NAME : STAGE_BG_CROSSFADE_ANIM_NAME
                     }
                 );
             } catch {
@@ -1188,6 +1491,7 @@ export class StageBackground {
             }
 
             if (!completed) {
+                if (root && !root.destroyed) root.alpha = 1;
                 this._snapStageBgMeshesAfterInterrupt();
                 this.syncOverlaySceneSelect();
                 return;
@@ -1200,6 +1504,7 @@ export class StageBackground {
             incoming.texture = PIXI.Texture.EMPTY;
             incoming.alpha = 1;
             incoming.visible = false;
+            if (root && !root.destroyed) root.alpha = 1;
             this._stageBgDisplayedUrl = '';
             this._syncStageBgVisibility();
             this._updateStageBgMeshLayout();
@@ -1228,10 +1533,16 @@ export class StageBackground {
             incoming.visible = false;
 
             stable.texture = newTex;
-            stable.alpha = 0;
+            stable.alpha = 1;
             stable.visible = true;
             stable._lichsomaLayoutW = undefined;
             stable._lichsomaLayoutH = undefined;
+            if (root) CanvasAnimation.terminateAnimation(STAGE_BG_STAGE_FADE_ANIM_NAME);
+            if (root) {
+                this._stageBgStageFadeRequestId++;
+                this._stageBgStageFadeActive = false;
+            }
+            if (root && !root.destroyed) root.alpha = 0;
 
             this._updateStageBgMeshLayout();
             this._syncStageBgVisibility();
@@ -1239,11 +1550,11 @@ export class StageBackground {
             let fadeInDone = true;
             try {
                 fadeInDone = await CanvasAnimation.animate(
-                    [{ parent: stable, attribute: 'alpha', from: 0, to: 1 }],
+                    [{ parent: root ?? stable, attribute: 'alpha', from: root?.alpha ?? 0, to: 1 }],
                     {
                         duration: STAGE_BG_CROSSFADE_MS,
                         easing: 'easeInOutCosine',
-                        name: STAGE_BG_CROSSFADE_ANIM_NAME
+                        name: root ? STAGE_BG_STAGE_FADE_ANIM_NAME : STAGE_BG_CROSSFADE_ANIM_NAME
                     }
                 );
             } catch {
@@ -1251,12 +1562,14 @@ export class StageBackground {
             }
 
             if (!fadeInDone) {
+                if (root && !root.destroyed) root.alpha = 1;
                 this._snapStageBgMeshesAfterInterrupt();
                 this.syncOverlaySceneSelect();
                 return;
             }
 
             stable.alpha = 1;
+            if (root && !root.destroyed) root.alpha = 1;
             this._stageBgDisplayedUrl = targetUrl;
             this._updateStageBgMeshLayout();
             this._syncStageBgVisibility();
@@ -1318,7 +1631,8 @@ export class StageBackground {
     }
 
     static _openImageFilePicker({ current, callback }) {
-        const FilePickerImpl = foundry.applications.apps.FilePicker.implementation;
+        const FilePickerImpl = LichsomaSpeakerStageCompat.FilePicker || globalThis.FilePicker;
+        if (!FilePickerImpl) return;
         new FilePickerImpl({
             type: 'image',
             current: current || '',
@@ -1327,481 +1641,8 @@ export class StageBackground {
     }
 }
 
-/**
- * 배경 장면 그리드 설정 — Speaker Selector 액터 격자 설정과 유사한 ApplicationV2
- */
-class StageBackgroundSettingApp extends foundry.applications.api.ApplicationV2 {
-    static DEFAULT_OPTIONS = {
-        id: 'lichsoma-stage-background-setting',
-        classes: ['lichsoma-stage-background-setting-app'],
-        tag: 'div',
-        window: {
-            frame: true,
-            positioned: true,
-            title: 'SPEAKERSTAGE.Background.Dialog.Title',
-            resizable: true,
-            minimizable: false,
-            contentClasses: ['lichsoma-stage-background-setting-content']
-        },
-        position: {
-            width: 720,
-            height: 620
-        }
-    };
-
-    /** @type {{ path: string, name: string, times: { morning: string, afternoon: string, latenight: string } }[]} */
-    _scratchRecords = [];
-
-    async _prepareContext(options) {
-        return {};
-    }
-
-    async _renderHTML(context, options) {
-        this._scratchRecords = StageBackground.getSlotRecordsNormalized().map((r) => ({
-            path: r.path ?? '',
-            name: r.name ?? '',
-            times: {
-                morning: r.times?.morning ?? '',
-                afternoon: r.times?.afternoon ?? '',
-                latenight: r.times?.latenight ?? ''
-            }
-        }));
-
-        const wrap = document.createElement('div');
-        wrap.className = 'lichsoma-stage-bg-app-inner';
-
-        const toolbar = document.createElement('div');
-        toolbar.className = 'lichsoma-stage-bg-setting-toolbar';
-        const label = document.createElement('label');
-        label.textContent = game.i18n.localize('SPEAKERSTAGE.Background.Dialog.ActiveLabel');
-        label.setAttribute('for', 'lichsoma-stage-bg-active-select');
-        const select = document.createElement('select');
-        select.id = 'lichsoma-stage-bg-active-select';
-
-        toolbar.append(label, select);
-
-        const scroll = document.createElement('div');
-        scroll.className = 'lichsoma-stage-bg-setting-scroll';
-        const grid = document.createElement('div');
-        grid.className = 'lichsoma-stage-bg-grid';
-
-        const activeIdx = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_INDEX);
-
-        for (let i = 0; i < MAX_SLOTS; i++) {
-            grid.appendChild(this._createSlotEl(i, activeIdx));
-        }
-
-        this._populateActiveSelect(select, activeIdx);
-
-        select.addEventListener('change', async () => {
-            const v = parseInt(select.value, 10);
-            const active = Number.isNaN(v) ? -1 : v;
-            await StageBackground.saveActiveIndex(active);
-            StageBackground.refreshBackgroundImage();
-            this._highlightActiveSlots(active);
-        });
-
-        grid.addEventListener('click', (ev) => {
-            if (ev.target.closest('.lichsoma-stage-bg-slot-name')) return;
-
-            const slot = ev.target.closest('.lichsoma-stage-bg-slot');
-            if (!slot) return;
-            const idx = parseInt(slot.dataset.slotIndex, 10);
-            if (Number.isNaN(idx)) return;
-
-            const tri = StageBackground.isTimeVariantBackgroundActive();
-
-            if (tri) {
-                const timeClear = ev.target.closest('.lichsoma-stage-bg-time-clear');
-                const timeCell = ev.target.closest('.lichsoma-stage-bg-time-cell');
-
-                const persistAndRedraw = async () => {
-                    this._redrawSlot(slot, idx);
-                    await StageBackground.saveSlots(this._scratchRecords);
-                    this._populateActiveSelect(select, game.settings.get(MODULE_ID, SETTINGS.ACTIVE_INDEX));
-                    StageBackground.refreshBackgroundImage();
-                };
-
-                if (timeClear) {
-                    ev.stopPropagation();
-                    const key = timeClear.dataset.timeOfDay;
-                    if (!TIME_OF_DAY_KEYS.includes(key)) return;
-                    this._scratchRecords[idx].times[key] = '';
-                    if (key === 'morning') this._scratchRecords[idx].path = '';
-                    void persistAndRedraw();
-                    return;
-                }
-                if (timeCell && !ev.target.closest('.lichsoma-stage-bg-time-clear')) {
-                    ev.stopPropagation();
-                    const key = timeCell.dataset.timeOfDay;
-                    if (!TIME_OF_DAY_KEYS.includes(key)) return;
-                    const current = this._scratchRecords[idx].times[key] || '';
-                    StageBackground._openImageFilePicker({
-                        current,
-                        callback: async (path) => {
-                            if (typeof path !== 'string') return;
-                            this._scratchRecords[idx].times[key] = path;
-                            await persistAndRedraw();
-                        }
-                    });
-                    return;
-                }
-                return;
-            }
-
-            const clearBtn = ev.target.closest('.lichsoma-stage-bg-slot-clear');
-            if (clearBtn) {
-                ev.stopPropagation();
-                if (!this._scratchRecords[idx].times) this._scratchRecords[idx].times = emptyTimesMap();
-                this._scratchRecords[idx].path = '';
-                this._scratchRecords[idx].times.morning = '';
-                this._redrawSlot(slot, idx);
-                void StageBackground.saveSlots(this._scratchRecords);
-                this._populateActiveSelect(select, game.settings.get(MODULE_ID, SETTINGS.ACTIVE_INDEX));
-                StageBackground.refreshBackgroundImage();
-                return;
-            }
-
-            const rec = this._scratchRecords[idx];
-            const current = (rec.times?.morning || '').trim() || (rec.path || '').trim();
-            StageBackground._openImageFilePicker({
-                current,
-                callback: async (path) => {
-                    if (typeof path !== 'string') return;
-                    if (!rec.times) rec.times = emptyTimesMap();
-                    rec.times.morning = path;
-                    rec.path = path;
-                    this._redrawSlot(slot, idx);
-                    await StageBackground.saveSlots(this._scratchRecords);
-                    this._populateActiveSelect(select, game.settings.get(MODULE_ID, SETTINGS.ACTIVE_INDEX));
-                    StageBackground.refreshBackgroundImage();
-                }
-            });
-        });
-
-        grid.addEventListener('change', (ev) => {
-            const inp = ev.target.closest('.lichsoma-stage-bg-slot-name');
-            if (!inp || inp.tagName !== 'INPUT') return;
-            const idx = parseInt(inp.dataset.slotIndex, 10);
-            if (Number.isNaN(idx)) return;
-            const trimmed = inp.value.trim();
-            this._scratchRecords[idx].name = trimmed || defaultSlotName(idx);
-            inp.value = this._scratchRecords[idx].name;
-            void StageBackground.saveSlots(this._scratchRecords);
-            this._populateActiveSelect(select, game.settings.get(MODULE_ID, SETTINGS.ACTIVE_INDEX));
-        });
-
-        grid.addEventListener('keydown', (ev) => {
-            if (ev.key !== 'Enter' || !ev.target.classList.contains('lichsoma-stage-bg-slot-name')) return;
-            ev.preventDefault();
-            ev.target.blur();
-        });
-
-        grid.addEventListener('dragstart', (e) => {
-            const slot = e.target.closest('.lichsoma-stage-bg-slot');
-            if (!slot || !grid.contains(slot)) return;
-            if (StageBackground.isTimeVariantBackgroundActive()) {
-                if (
-                    e.target.closest('.lichsoma-stage-bg-time-clear') ||
-                    e.target.closest('.lichsoma-stage-bg-time-placeholder-inner') ||
-                    e.target.closest('.lichsoma-stage-bg-slot-name-row')
-                ) {
-                    e.preventDefault();
-                    return;
-                }
-            } else if (
-                e.target.closest('.lichsoma-stage-bg-slot-clear') ||
-                e.target.closest('.lichsoma-stage-bg-slot-name-row')
-            ) {
-                e.preventDefault();
-                return;
-            }
-            const from = parseInt(slot.dataset.slotIndex, 10);
-            if (Number.isNaN(from)) return;
-            e.dataTransfer.setData('text/plain', String(from));
-            e.dataTransfer.effectAllowed = 'move';
-            slot.classList.add('lichsoma-stage-bg-slot--dragging');
-        });
-
-        grid.addEventListener('dragend', () => {
-            grid.querySelectorAll('.lichsoma-stage-bg-slot--dragging').forEach((el) =>
-                el.classList.remove('lichsoma-stage-bg-slot--dragging')
-            );
-            grid.querySelectorAll('.lichsoma-stage-bg-slot--drag-over').forEach((el) =>
-                el.classList.remove('lichsoma-stage-bg-slot--drag-over')
-            );
-        });
-
-        grid.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            const slot = e.target.closest('.lichsoma-stage-bg-slot');
-            grid.querySelectorAll('.lichsoma-stage-bg-slot--drag-over').forEach((el) =>
-                el.classList.remove('lichsoma-stage-bg-slot--drag-over')
-            );
-            if (slot && grid.contains(slot)) slot.classList.add('lichsoma-stage-bg-slot--drag-over');
-        });
-
-        grid.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            const slot = e.target.closest('.lichsoma-stage-bg-slot');
-            grid.querySelectorAll('.lichsoma-stage-bg-slot--drag-over').forEach((el) =>
-                el.classList.remove('lichsoma-stage-bg-slot--drag-over')
-            );
-            if (!slot || !grid.contains(slot)) return;
-
-            const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
-            const to = parseInt(slot.dataset.slotIndex, 10);
-            if (Number.isNaN(from) || Number.isNaN(to) || from === to) return;
-            if (!this._reorderScratchRecords(from, to)) return;
-
-            const curActive = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_INDEX);
-            const n = typeof curActive === 'number' ? curActive : -1;
-            const newActive = this._mapActiveIndexAfterSlotReorder(n, from, to);
-
-            await StageBackground.saveSlots(this._scratchRecords);
-            if (newActive !== n) await StageBackground.saveActiveIndex(newActive);
-
-            this._rebuildSlotGrid(grid, select);
-            StageBackground.refreshBackgroundImage();
-        });
-
-        scroll.appendChild(grid);
-        wrap.append(toolbar, scroll);
-
-        return wrap;
-    }
-
-    /** 슬롯 레코드 한 칸을 from → to 위치로 옮김 */
-    _reorderScratchRecords(fromIdx, toIdx) {
-        const from = Number(fromIdx);
-        const to = Number(toIdx);
-        if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) return false;
-        if (from < 0 || from >= MAX_SLOTS || to < 0 || to >= MAX_SLOTS) return false;
-        const rec = this._scratchRecords[from];
-        this._scratchRecords.splice(from, 1);
-        this._scratchRecords.splice(to, 0, rec);
-        return true;
-    }
-
-    /**
-     * 배열에서 한 요소를 옮긴 뒤 월드 설정의 활성 슬롯 인덱스 보정.
-     * @param {number} active
-     * @param {number} from
-     * @param {number} to
-     */
-    _mapActiveIndexAfterSlotReorder(active, from, to) {
-        if (typeof active !== 'number' || active < 0) return active;
-        if (active === from) return to;
-        if (from < to) {
-            if (active > from && active <= to) return active - 1;
-        } else if (from > to) {
-            if (active >= to && active < from) return active + 1;
-        }
-        return active;
-    }
-
-    _rebuildSlotGrid(gridEl, selectEl) {
-        const activeIdx = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_INDEX);
-        const a = typeof activeIdx === 'number' ? activeIdx : -1;
-        gridEl.replaceChildren();
-        for (let i = 0; i < MAX_SLOTS; i++) {
-            gridEl.appendChild(this._createSlotEl(i, a));
-        }
-        this._populateActiveSelect(selectEl, a);
-        this._highlightActiveSlots(a);
-    }
-
-    _populateActiveSelect(select, currentActive) {
-        const prev = select.value;
-        select.replaceChildren();
-
-        const none = document.createElement('option');
-        none.value = '-1';
-        none.textContent = game.i18n.localize('SPEAKERSTAGE.Background.Dialog.None');
-        select.appendChild(none);
-
-        const records = this._scratchRecords;
-        for (let i = 0; i < MAX_SLOTS; i++) {
-            if (!slotRecordHasAnyImage(records[i])) continue;
-            const opt = document.createElement('option');
-            opt.value = String(i);
-            opt.textContent = records[i]?.name?.trim() || defaultSlotName(i);
-            select.appendChild(opt);
-        }
-
-        const target = String(currentActive);
-        if ([...select.options].some((o) => o.value === target)) {
-            select.value = target;
-        } else if (prev && [...select.options].some((o) => o.value === prev)) {
-            select.value = prev;
-        } else {
-            select.value = '-1';
-        }
-    }
-
-    _highlightActiveSlots(activeIdx) {
-        const root = this.element?.querySelector('.lichsoma-stage-bg-grid');
-        if (!root) return;
-        root.querySelectorAll('.lichsoma-stage-bg-slot').forEach((el) => {
-            const i = parseInt(el.dataset.slotIndex, 10);
-            el.classList.toggle('is-active-slot', i === activeIdx);
-        });
-    }
-
-    /**
-     * @param {number} index
-     * @param {number} activeIdx
-     */
-    _createSlotEl(index, activeIdx) {
-        const slot = document.createElement('div');
-        slot.className = 'lichsoma-stage-bg-slot';
-        if (index === activeIdx) slot.classList.add('is-active-slot');
-        slot.dataset.slotIndex = String(index);
-
-        const rec = this._scratchRecords[index] ?? {
-            path: '',
-            name: defaultSlotName(index),
-            times: emptyTimesMap()
-        };
-        if (!rec.times) rec.times = emptyTimesMap();
-
-        const displayName = rec.name?.trim() || defaultSlotName(index);
-
-        const tri = StageBackground.isTimeVariantBackgroundActive();
-
-        if (tri) {
-            slot.classList.add('lichsoma-stage-bg-slot--time-variant');
-            slot.draggable = true;
-            slot.title = game.i18n.localize('SPEAKERSTAGE.Background.Dialog.SlotDragReorderHint');
-
-            const previewStack = document.createElement('div');
-            previewStack.className = 'lichsoma-stage-bg-slot-time-stack';
-
-            const timeStrip = document.createElement('div');
-            timeStrip.className = 'lichsoma-stage-bg-slot-time-strip';
-            for (const key of TIME_OF_DAY_KEYS) {
-                const cell = document.createElement('div');
-                cell.className = 'lichsoma-stage-bg-time-cell';
-                cell.dataset.timeOfDay = key;
-
-                const lab = document.createElement('span');
-                lab.className = 'lichsoma-stage-bg-time-label';
-                lab.textContent = game.i18n.localize(`SPEAKERSTAGE.Background.Dialog.Time.${key}`);
-
-                const tpath = (rec.times[key] || '').trim();
-                const mediaWrap = document.createElement('div');
-                const sliceMod =
-                    key === 'morning'
-                        ? 'lichsoma-stage-bg-time-slice--left'
-                        : key === 'afternoon'
-                          ? 'lichsoma-stage-bg-time-slice--center'
-                          : 'lichsoma-stage-bg-time-slice--right';
-
-                const placeholderHtml =
-                    '<span class="lichsoma-stage-bg-time-add-btn"><i class="fas fa-plus"></i></span>';
-
-                const tc = document.createElement('button');
-                tc.type = 'button';
-                tc.className = 'lichsoma-stage-bg-time-clear';
-                tc.title = game.i18n.localize('SPEAKERSTAGE.Background.Dialog.Clear');
-                tc.dataset.timeOfDay = key;
-                tc.innerHTML = '<i class="fas fa-times"></i>';
-
-                const addPlaceholder = () => {
-                    mediaWrap.replaceChildren();
-                    mediaWrap.style.backgroundImage = '';
-                    mediaWrap.className = 'lichsoma-stage-bg-time-media';
-                    mediaWrap.removeAttribute('role');
-                    mediaWrap.setAttribute('aria-label', lab.textContent);
-                    const ph = document.createElement('div');
-                    ph.className = 'lichsoma-stage-bg-time-placeholder-inner';
-                    ph.innerHTML = placeholderHtml;
-                    mediaWrap.appendChild(ph);
-                };
-
-                if (!tpath) {
-                    addPlaceholder();
-                    cell.append(lab, mediaWrap);
-                } else {
-                    mediaWrap.className = `lichsoma-stage-bg-time-media lichsoma-stage-bg-time-slice ${sliceMod}`;
-                    mediaWrap.setAttribute('role', 'img');
-                    mediaWrap.setAttribute('aria-label', lab.textContent);
-                    const u = routePath(tpath);
-                    const probe = new Image();
-                    probe.onload = () => {
-                        mediaWrap.style.backgroundImage = `url(${JSON.stringify(u)})`;
-                        cell.appendChild(tc);
-                    };
-                    probe.onerror = () => {
-                        addPlaceholder();
-                    };
-                    probe.src = u;
-                    cell.append(lab, mediaWrap);
-                }
-
-                timeStrip.appendChild(cell);
-            }
-
-            previewStack.append(timeStrip);
-            slot.append(previewStack);
-        } else {
-            slot.draggable = true;
-            slot.title = game.i18n.localize('SPEAKERSTAGE.Background.Dialog.SlotDragReorderHint');
-
-            const clearBtn = document.createElement('button');
-            clearBtn.type = 'button';
-            clearBtn.className = 'lichsoma-stage-bg-slot-clear';
-            clearBtn.title = game.i18n.localize('SPEAKERSTAGE.Background.Dialog.Clear');
-            clearBtn.innerHTML = '<i class="fas fa-times"></i>';
-
-            const singleSrc = (rec.times?.morning || '').trim() || (rec.path || '').trim();
-            if (singleSrc) {
-                const img = document.createElement('img');
-                img.className = 'lichsoma-stage-bg-slot-preview';
-                img.alt = displayName;
-                img.draggable = false;
-                img.src = routePath(singleSrc);
-                slot.append(clearBtn, img);
-            } else {
-                const ph = document.createElement('div');
-                ph.className = 'lichsoma-stage-bg-slot-placeholder';
-                ph.innerHTML = `<i class="fas fa-plus"></i><span>${game.i18n.localize('SPEAKERSTAGE.Background.Dialog.AddImage')}</span>`;
-                slot.append(clearBtn, ph);
-            }
-        }
-
-        const nameRow = document.createElement('div');
-        nameRow.className = 'lichsoma-stage-bg-slot-name-row';
-        const nameInp = document.createElement('input');
-        nameInp.type = 'text';
-        nameInp.className = 'lichsoma-stage-bg-slot-name';
-        nameInp.dataset.slotIndex = String(index);
-        nameInp.value = displayName;
-        nameInp.setAttribute('aria-label', game.i18n.localize('SPEAKERSTAGE.Background.Dialog.NameAria'));
-        nameInp.placeholder = game.i18n.localize('SPEAKERSTAGE.Background.Dialog.NamePlaceholder');
-        nameInp.addEventListener('mousedown', (e) => e.stopPropagation());
-        nameInp.addEventListener('click', (e) => e.stopPropagation());
-        nameRow.appendChild(nameInp);
-        slot.appendChild(nameRow);
-
-        return slot;
-    }
-
-    _redrawSlot(slotEl, index) {
-        const activeIdx = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_INDEX);
-        const newEl = this._createSlotEl(index, activeIdx);
-        slotEl.replaceWith(newEl);
-        this._highlightActiveSlots(activeIdx);
-    }
-
-    _replaceHTML(result, content, options) {
-        content.replaceChildren(result);
-    }
-
-    _onClose(options) {
-        void StageBackground.saveSlots(this._scratchRecords);
-    }
-}
+const StageBackgroundSettingApp = createBackgroundSettingApp(StageBackground, {
+    MODULE_ID, SETTINGS, MAX_SLOTS, TIME_OF_DAY_KEYS, defaultSlotName, emptyTimesMap, slotRecordHasAnyImage, routePath
+});
 
 StageBackground.initialize();

@@ -1,52 +1,73 @@
 {
-    "id": "lichsoma-speaker-stage",
-    "title": "LichSOMA's Speaker Stage",
-    "description": "An extension module for LichSOMA's Speaker Selector that supports visual novel style roleplaying.",
-    "version": "2.1.0",
-    "compatibility": {
-      "minimum": "14",
-      "verified": "14"
+  "id": "lichsoma-speaker-stage",
+  "title": "LichSOMA's Speaker Stage",
+  "description": "An extension module for LichSOMA's Speaker Selector that supports visual novel style roleplaying.",
+  "version": "3.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "LichSoma"
+    }
+  ],
+  "esmodules": [
+    "scripts/lichsoma-speaker-stage-compat.js",
+    "scripts/lichsoma-speaker-stage.js",
+    "scripts/lichsoma-stage-background.js"
+  ],
+  "styles": [
+    "styles/lichsoma-speaker-stage.css",
+    "styles/lichsoma-stage-backstage.css",
+    "styles/lichsoma-stage-overlay.css",
+    "styles/lichsoma-stage-dialogue.css",
+    "styles/lichsoma-stage-standing-manager.css",
+    "styles/lichsoma-stage-standing.css",
+    "styles/lichsoma-stage-integrations.css",
+    "styles/lichsoma-stage-background.css",
+    "styles/lichsoma-speaker-stage-css-editor.css",
+    "styles/lichsoma-stage-theme.css"
+  ],
+  "languages": [
+    {
+      "lang": "ko",
+      "name": "Korean",
+      "path": "lang/ko.json"
     },
-    "authors": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "packs": [],
+  "relationships": {
+    "requires": [
       {
-        "name": "LichSoma"
+        "id": "lichsoma-speaker-selector",
+        "type": "module",
+        "compatibility": {
+          "minimum": "4.0.0"
+        },
+        "manifest": "https://github.com/LichSOMA/lichsoma-speaker-selector/releases/latest/download/module.json"
       }
     ],
-    "esmodules": [
-        "scripts/lichsoma-speaker-stage.js",
-        "scripts/lichsoma-stage-background.js"
-    ],
-    "styles": [
-        "styles/lichsoma-speaker-stage.css",
-        "styles/lichsoma-stage-background.css"
-    ],
-    "languages": [
+    "recommends": [
       {
-        "lang": "ko",
-        "name": "Korean",
-        "path": "lang/ko.json"
+        "id": "lichsoma-daily-calendar",
+        "type": "module",
+        "compatibility": {
+          "minimum": "1.0.0"
+        },
+        "manifest": "https://github.com/LichSOMA/lichsoma-daily-calendar/releases/latest/download/module.json"
       }
-    ],
-    "packs": [],
-    "relationships": {
-      "requires": [
-        {
-          "id": "lichsoma-speaker-selector",
-          "type": "module",
-          "compatibility": {
-            "minimum": "2.1.0"
-          }
-        }
-      ],
-      "recommends": []
-    },
-  
-    "socket": true,
-    "url": "https://github.com/LichSOMA/lichsoma-speaker-stage",
-    "manifest": "https://github.com/LichSOMA/lichsoma-speaker-stage/releases/latest/download/module.json",
-    "download": "https://github.com/LichSOMA/lichsoma-speaker-stage/releases/download/2.1.0/lichsoma-speaker-stage.zip",
-    "license": "https://github.com/LichSOMA/lichsoma-speaker-stage/blob/main/LICENSE.md",
-    "readme": "https://github.com/LichSOMA/lichsoma-speaker-stage/blob/main/README.md"
-  }
-  
-  
+    ]
+  },
+  "socket": true,
+  "url": "https://github.com/LichSOMA/lichsoma-speaker-stage",
+  "manifest": "https://github.com/LichSOMA/lichsoma-speaker-stage/releases/latest/download/module.json",
+  "download": "https://github.com/LichSOMA/lichsoma-speaker-stage/releases/download/3.0.0/lichsoma-speaker-stage.zip",
+  "license": "https://github.com/LichSOMA/lichsoma-speaker-stage/blob/main/LICENSE.md",
+  "readme": "https://github.com/LichSOMA/lichsoma-speaker-stage/blob/main/README.md"
+}
